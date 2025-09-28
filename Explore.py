@@ -54,14 +54,17 @@ def get_words_map():
             for word in words:
                 wordl=word.lower().strip(".,!?\"'()")
                 # Filter out stopwords and short words
-                if wordl not in stop_words and len(wordl) > 2:
-                    if wordl not in words_map:
-                        words_map[wordl]=[ref]
-                    else:
-                        words_map[wordl].append(ref)
+                # if wordl not in stop_words and len(wordl) > 2:
+                if wordl not in words_map:
+                    words_map[wordl]=[ref]
+                else:
+                    words_map[wordl].append(ref)
     sorted_words_map=dict(sorted(words_map.items(), key=lambda x: len(x[1]), reverse=True))
     with open("words_map.json", "w", encoding='utf-8') as file:
         json.dump(sorted_words_map, file, indent=4, ensure_ascii=False)
+    with open("words_map.txt", "w", encoding='utf-8') as file:
+        for k in sorted_words_map.keys():
+            file.write(f"{k} - {len(sorted_words_map[k])}\n")
     return sorted_words_map
 
 wm=get_words_map()

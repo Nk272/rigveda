@@ -1,0 +1,253 @@
+Top 250 Most Important Words (Stopwords Filtered):
+============================================================
+
+  1. heaven                    -    887 occurrences
+  2. mighty                    -    870 occurrences
+  3. men                       -    861 occurrences
+  4. wealth                    -    781 occurrences
+  5. these                     -    773 occurrences
+  6. one                       -    767 occurrences
+  7. forth                     -    749 occurrences
+  8. earth                     -    705 occurrences
+  9. strength                  -    691 occurrences
+ 10. you                       -    677 occurrences
+ 11. strong                    -    657 occurrences
+ 12. lord                      -    653 occurrences
+ 13. god                       -    649 occurrences
+ 14. great                     -    611 occurrences
+ 15. most                      -    585 occurrences
+ 16. bring                     -    580 occurrences
+ 17. art                       -    576 occurrences
+ 18. through                   -    570 occurrences
+ 19. holy                      -    548 occurrences
+ 20. sacrifice                 -    539 occurrences
+ 21. them                      -    527 occurrences
+ 22. praise                    -    521 occurrences
+ 23. might                     -    485 occurrences
+ 24. food                      -    479 occurrences
+ 25. whom                      -    465 occurrences
+ 26. man                       -    464 occurrences
+ 27. maruts                    -    453 occurrences
+ 28. drink                     -    449 occurrences
+ 29. juice                     -    445 occurrences
+ 30. thine                     -    444 occurrences
+ 31. whose                     -    424 occurrences
+ 32. power                     -    420 occurrences
+ 33. light                     -    413 occurrences
+ 34. those                     -    406 occurrences
+ 35. waters                    -    405 occurrences
+ 36. steeds                    -    398 occurrences
+ 37. hither                    -    396 occurrences
+ 38. aśvins                    -    394 occurrences
+ 39. even                      -    392 occurrences
+ 40. down                      -    391 occurrences
+ 41. varuṇa                    -    387 occurrences
+ 42. heroes                    -    385 occurrences
+ 43. hero                      -    378 occurrences
+ 44. car                       -    364 occurrences
+ 45. rich                      -    361 occurrences
+ 46. both                      -    360 occurrences
+ 47. riches                    -    356 occurrences
+ 48. song                      -    355 occurrences
+ 49. many                      -    344 occurrences
+ 50. away                      -    342 occurrences
+ 51. hast                      -    341 occurrences
+ 52. her                       -    340 occurrences
+ 53. upon                      -    337 occurrences
+ 54. here                      -    331 occurrences
+ 55. was                       -    328 occurrences
+ 56. unto                      -    327 occurrences
+ 57. bright                    -    324 occurrences
+ 58. kine                      -    324 occurrences
+ 59. out                       -    322 occurrences
+ 60. mitra                     -    315 occurrences
+ 61. friend                    -    313 occurrences
+ 62. flow                      -    313 occurrences
+ 63. day                       -    304 occurrences
+ 64. now                       -    301 occurrences
+ 65. hymns                     -    295 occurrences
+ 66. two                       -    295 occurrences
+ 67. son                       -    295 occurrences
+ 68. songs                     -    292 occurrences
+ 69. gifts                     -    288 occurrences
+ 70. worship                   -    280 occurrences
+ 71. priest                    -    273 occurrences
+ 72. full                      -    273 occurrences
+ 73. far                       -    267 occurrences
+ 74. law                       -    264 occurrences
+ 75. win                       -    259 occurrences
+ 76. high                      -    258 occurrences
+ 77. ever                      -    258 occurrences
+ 78. hymn                      -    257 occurrences
+ 79. every                     -    256 occurrences
+ 80. good                      -    249 occurrences
+ 81. horses                    -    248 occurrences
+ 82. brought                   -    246 occurrences
+ 83. life                      -    243 occurrences
+ 84. wise                      -    242 occurrences
+ 85. milk                      -    240 occurrences
+ 86. well                      -    239 occurrences
+ 87. fair                      -    239 occurrences
+ 88. prayer                    -    235 occurrences
+ 89. own                       -    234 occurrences
+ 90. were                      -    234 occurrences
+ 91. sacred                    -    233 occurrences
+ 92. swift                     -    232 occurrences
+ 93. aid                       -    232 occurrences
+ 94. among                     -    232 occurrences
+ 95. born                      -    228 occurrences
+ 96. sage                      -    226 occurrences
+ 97. glory                     -    221 occurrences
+ 98. home                      -    219 occurrences
+ 99. first                     -    218 occurrences
+100. laud                      -    217 occurrences
+101. yea                       -    215 occurrences
+102. place                     -    214 occurrences
+103. set                       -    214 occurrences
+104. ones                      -    212 occurrences
+105. sing                      -    209 occurrences
+106. each                      -    208 occurrences
+107. time                      -    207 occurrences
+108. near                      -    203 occurrences
+109. best                      -    202 occurrences
+110. old                       -    201 occurrences
+111. sun                       -    199 occurrences
+112. maghavan                  -    194 occurrences
+113. been                      -    192 occurrences
+114. grass                     -    192 occurrences
+115. indu                      -    192 occurrences
+116. together                  -    185 occurrences
+117. dawn                      -    185 occurrences
+118. lofty                     -    184 occurrences
+119. thousand                  -    183 occurrences
+120. hundred                   -    183 occurrences
+121. bull                      -    182 occurrences
+122. never                     -    181 occurrences
+123. cattle                    -    181 occurrences
+124. hear                      -    177 occurrences
+125. things                    -    177 occurrences
+126. sons                      -    175 occurrences
+127. send                      -    175 occurrences
+128. singers                   -    173 occurrences
+129. streams                   -    173 occurrences
+130. immortal                  -    172 occurrences
+131. three                     -    172 occurrences
+132. heavens                   -    171 occurrences
+133. king                      -    171 occurrences
+134. splendour                 -    170 occurrences
+135. she                       -    168 occurrences
+136. lauds                     -    167 occurrences
+137. mortal                    -    167 occurrences
+138. meet                      -    166 occurrences
+139. within                    -    166 occurrences
+140. chariot                   -    166 occurrences
+141. ancient                   -    164 occurrences
+142. friends                   -    164 occurrences
+143. gives                     -    162 occurrences
+144. sweet                     -    162 occurrences
+145. over                      -    162 occurrences
+146. grant                     -    161 occurrences
+147. favour                    -    161 occurrences
+148. then                      -    159 occurrences
+149. days                      -    158 occurrences
+150. foes                      -    156 occurrences
+151. oblation                  -    156 occurrences
+152. singer                    -    155 occurrences
+153. gracious                  -    155 occurrences
+154. savitar                   -    155 occurrences
+155. pour                      -    154 occurrences
+156. people                    -    153 occurrences
+157. meath                     -    153 occurrences
+158. fight                     -    152 occurrences
+159. sūrya                     -    152 occurrences
+160. guard                     -    151 occurrences
+161. dear                      -    151 occurrences
+162. bay                       -    150 occurrences
+163. while                     -    150 occurrences
+164. mother                    -    150 occurrences
+165. onward                    -    150 occurrences
+166. cows                      -    150 occurrences
+167. free                      -    149 occurrences
+168. wondrous                  -    147 occurrences
+169. vigour                    -    147 occurrences
+170. rivers                    -    147 occurrences
+171. bear                      -    146 occurrences
+172. floods                    -    145 occurrences
+173. indras                    -    144 occurrences
+174. there                     -    143 occurrences
+175. before                    -    143 occurrences
+176. pure                      -    141 occurrences
+177. battle                    -    141 occurrences
+178. way                       -    141 occurrences
+179. sages                     -    139 occurrences
+180. none                      -    138 occurrences
+181. gain                      -    137 occurrences
+182. spread                    -    136 occurrences
+183. preserve                  -    136 occurrences
+184. oil                       -    135 occurrences
+185. oblations                 -    135 occurrences
+186. praises                   -    134 occurrences
+187. wide                      -    133 occurrences
+188. seven                     -    133 occurrences
+189. liberal                   -    133 occurrences
+190. bounteous                 -    132 occurrences
+191. into                      -    132 occurrences
+192. pressed                   -    132 occurrences
+193. lords                     -    131 occurrences
+194. evermore                  -    131 occurrences
+195. spirit                    -    130 occurrences
+196. its                       -    130 occurrences
+197. dwelling                  -    130 occurrences
+198. joy                       -    129 occurrences
+199. treasures                 -    129 occurrences
+200. powers                    -    129 occurrences
+201. worlds                    -    129 occurrences
+202. ample                     -    129 occurrences
+203. pavamana                  -    129 occurrences
+204. glorious                  -    128 occurrences
+205. drops                     -    128 occurrences
+206. love                      -    128 occurrences
+207. aditi                     -    128 occurrences
+208. delight                   -    127 occurrences
+209. living                    -    126 occurrences
+210. deeds                     -    126 occurrences
+211. friendship                -    126 occurrences
+212. poured                    -    123 occurrences
+213. wisdom                    -    123 occurrences
+214. treasure                  -    122 occurrences
+215. pious                     -    122 occurrences
+216. fain                      -    122 occurrences
+217. path                      -    122 occurrences
+218. drive                     -    121 occurrences
+219. gift                      -    121 occurrences
+220. auspicious                -    121 occurrences
+221. oer                       -    121 occurrences
+222. pūṣan                     -    120 occurrences
+223. heart                     -    120 occurrences
+224. twere                     -    120 occurrences
+225. comes                     -    120 occurrences
+226. round                     -    119 occurrences
+227. still                     -    119 occurrences
+228. true                      -    118 occurrences
+229. brings                    -    118 occurrences
+230. blessings                 -    118 occurrences
+231. vāyu                      -    117 occurrences
+232. accept                    -    117 occurrences
+233. very                      -    117 occurrences
+234. noble                     -    117 occurrences
+235. stream                    -    116 occurrences
+236. splendid                  -    116 occurrences
+237. foe                       -    116 occurrences
+238. father                    -    115 occurrences
+239. nor                       -    115 occurrences
+240. spoil                     -    114 occurrences
+241. seek                      -    112 occurrences
+242. youthful                  -    112 occurrences
+243. bounty                    -    111 occurrences
+244. seat                      -    111 occurrences
+245. firm                      -    111 occurrences
+246. heavenly                  -    109 occurrences
+247. red                       -    108 occurrences
+248. store                     -    108 occurrences
+249. offspring                 -    108 occurrences
+250. offered                   -    107 occurrences
