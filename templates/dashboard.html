@@ -258,13 +258,16 @@
             <p style="color: #666; margin-top: 10px;">Analyze and curate word frequencies from the sacred Rigveda texts</p>
             <div class="stats">
                 <div class="stat-box">
-                    Active Words: <span id="totalWords">0</span>
+                    Included Words: <span id="includedCount">0</span>
                 </div>
                 <div class="stat-box">
-                    Removed Words: <span id="removedWordsCount">0</span>
+                    Ignored Words: <span id="ignoredCount">0</span>
                 </div>
                 <div class="stat-box">
-                    Merged Groups: <span id="mergedWordsCount">0</span>
+                    Combined Words: <span id="combinedCount">0</span>
+                </div>
+                <div class="stat-box">
+                    Total: <span id="totalCount">0</span>
                 </div>
             </div>
         </div>
@@ -282,6 +285,8 @@
                             <tr>
                                 <th>Word</th>
                                 <th>Frequency</th>
+                                <th>Type</th>
+                                <th>Merged</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -311,14 +316,14 @@
     <script>
         let allWords = [];
         let currentMergeWord = null;
-        let removedCount = 0;
-        let mergedCount = 0;
+        let stats = {};
 
         async function LoadWords() {
             try {
                 const response = await fetch('/api/words');
                 const data = await response.json();
                 allWords = data.words;
+                stats = data.stats;
                 RenderWords(allWords);
                 UpdateStats();
             } catch (error) {
@@ -326,10 +331,19 @@
             }
         }
 
+        function GetTypeLabel(type) {
+            const labels = {
+                'named_entity': '👤 Named Entity',
+                'semantic_group': '📚 Semantic',
+                'standard': '📝 Standard'
+            };
+            return labels[type] || type;
+        }
+
         function RenderWords(words) {
             const tbody = document.getElementById('wordTableBody');
             if (words.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No words found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No words found</td></tr>';
                 return;
             }
 
@@ -337,8 +351,10 @@
                 <tr>
                     <td><strong>${item.word}</strong></td>
                     <td>${item.frequency.toLocaleString()}</td>
+                    <td>${GetTypeLabel(item.type)}</td>
+                    <td>${item.merged_count > 0 ? `${item.merged_count} variants` : '-'}</td>
                     <td class="actions">
-                        <button class="btn-remove" onclick="RemoveWord('${item.word}')">Remove</button>
+                        <button class="btn-remove" onclick="MoveToIgnored('${item.word}')">Ignore</button>
                         <button class="btn-merge" onclick="OpenMergeModal('${item.word}')">Merge</button>
                     </td>
                 </tr>
@@ -346,30 +362,28 @@
         }
 
         function UpdateStats() {
-            document.getElementById('totalWords').textContent = allWords.length.toLocaleString();
-            document.getElementById('removedWordsCount').textContent = removedCount.toLocaleString();
-            document.getElementById('mergedWordsCount').textContent = mergedCount.toLocaleString();
+            document.getElementById('includedCount').textContent = (stats.included || 0).toLocaleString();
+            document.getElementById('ignoredCount').textContent = (stats.ignored || 0).toLocaleString();
+            document.getElementById('combinedCount').textContent = (stats.combined || 0).toLocaleString();
+            document.getElementById('totalCount').textContent = (stats.total || 0).toLocaleString();
         }
 
-        async function RemoveWord(word) {
+        async function MoveToIgnored(word) {
             const row = event.target.closest('tr');
             row.style.opacity = '0.5';
             
             try {
-                const response = await fetch('/api/remove', {
+                const response = await fetch('/api/move-to-ignored', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ word })
                 });
                 
                 if (response.ok) {
-                    row.remove();
-                    removedCount++;
-                    allWords = allWords.filter(w => w.word !== word);
-                    UpdateStats();
+                    LoadWords();
                 }
             } catch (error) {
-                console.error('Error removing word:', error);
+                console.error('Error moving word:', error);
                 row.style.opacity = '1';
             }
         }
@@ -399,6 +413,7 @@
                     <div class="similar-word-item" onclick="MergeWithWord('${item.word}')">
                         <div class="similar-word-name">${item.word}</div>
                         <div class="similar-word-details">
+                            <span>${GetTypeLabel(item.type)}</span>
                             <span>Frequency: ${item.frequency.toLocaleString()}</span>
                             <span>Similarity: ${item.similarity}%</span>
                         </div>
@@ -426,11 +441,6 @@
                     })
                 });
                 
-                if (response.ok) {
-                    mergedCount++;
-                    removedCount++;
-                }
-                
                 CloseMergeModal();
                 LoadWords();
             } catch (error) {
@@ -439,19 +449,7 @@
         }
 
         async function ResetAll() {
-            if (confirm('Are you sure you want to reset all removed and merged words?')) {
-                try {
-                    await fetch('/api/reset', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                    removedCount = 0;
-                    mergedCount = 0;
-                    LoadWords();
-                } catch (error) {
-                    console.error('Error resetting:', error);
-                }
-            }
+            alert('To reset the database, please re-run: python word_processor.py');
         }
 
         document.getElementById('searchBox').addEventListener('input', (e) => {
