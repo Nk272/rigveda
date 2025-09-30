@@ -62,7 +62,7 @@ class WordProcessor:
 
         hymn_num = 1
         book_num = 1
-        for _, book_data in data['books'].items():
+        for _, book_data in tqdm(data['books'].items()):
             for _, hymn_data in book_data['hymns'].items():
                 text=hymn_data['text']
                 words=re.findall(r'\b[\w-]+\b', text)
@@ -89,9 +89,9 @@ class WordProcessor:
             if ent.label_ in ['PERSON', 'GPE', 'ORG', 'NORP', 'FAC', 'LOC']:
                 return True
         
-        for token in doc:
-            if token.pos_ == 'PROPN':
-                return True
+        # for token in doc:
+        #     if token.pos_ == 'PROPN':
+        #         return True
         
         return False
     
@@ -163,7 +163,6 @@ class WordProcessor:
                 if self.AreSimilarWords(wordObj, existingWord, semanticCheck):
                     existingWord.frequency += wordObj.frequency
                     wordObj.mergedWith = existingWord.word
-                    self.mergedWords.append(wordObj)
                     merged = True
                     break
             
@@ -186,6 +185,18 @@ class WordProcessor:
         
         return self.includedWords
 
+    def getEntitySet(self):
+        entitySet = set()
+        for word, wordObj in self.unfilteredWords.items():
+            if self.IsNamedEntity(wordObj):
+                entitySet.add(word)
+
+        entitySet = sorted(entitySet, key=lambda x: self.unfilteredWords[x].frequency, reverse=True)
+        with open("entity_set.txt", "w", encoding='utf-8') as file:
+            for word in entitySet:
+                file.write(f"{word} - {self.unfilteredWords[word].frequency}\n")
+        return entitySet
+    
     def CreateDatabase(self):
         """Create SQLite database with four tables"""
         conn = sqlite3.connect(self.db_path)
@@ -342,14 +353,17 @@ class WordProcessor:
         print("\n[1/3] Loading and extracting words from hymn data...")
         self.LoadHymnData()
         
-        print("\n[2/3] Processing and categorizing words...")
-        self.ProcessWords(self.unfilteredWords)
+        # print("\n[2/3] Processing and categorizing words...")
+        # self.ProcessWords(self.unfilteredWords)
+
+        print("\n[3/3] Getting entity set...")
+        self.getEntitySet()
         
-        print("\n[3/3] Creating database...")
-        self.CreateDatabase()
-        print(f"      Database created at: {self.db_path}")
+        # print("\n[3/3] Creating database...")
+        # self.CreateDatabase()
+        # print(f"      Database created at: {self.db_path}")
         
-        self.PrintStatistics(self.unfilteredWords)
+        # self.PrintStatistics(self.unfilteredWords)
 
 if __name__ == '__main__':
     processor = WordProcessor(
