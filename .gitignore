@@ -18,6 +18,9 @@ db.sqlite3-journal
 media/
 staticfiles/
 
+# Word Dashboard
+word_curation.db
+
 # React
 rigveda-frontend/node_modules/
 rigveda-frontend/build/

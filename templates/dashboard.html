@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rigveda Word Analysis Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+
+        .stat-box span {
+            font-weight: bold;
+            font-size: 24px;
+        }
+
+        .main-content {
+            display: block;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .word-table {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-remove {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-remove:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        .btn-merge {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-merge:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+
+        .btn-reset {
+            background: #f59e0b;
+            color: white;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+        }
+
+        .btn-reset:hover {
+            background: #d97706;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #333;
+            font-size: 22px;
+        }
+
+        .close-btn {
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+        }
+
+        .similar-word-item {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .similar-word-item:hover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+        }
+
+        .similar-word-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .similar-word-details {
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🕉️ Rigveda Word Analysis Dashboard</h1>
+            <p style="color: #666; margin-top: 10px;">Analyze and curate word frequencies from the sacred Rigveda texts</p>
+            <div class="stats">
+                <div class="stat-box">
+                    Active Words: <span id="totalWords">0</span>
+                </div>
+                <div class="stat-box">
+                    Removed Words: <span id="removedWordsCount">0</span>
+                </div>
+                <div class="stat-box">
+                    Merged Groups: <span id="mergedWordsCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">📊 Word List</h2>
+                    <button class="btn-reset" onclick="ResetAll()">Reset All</button>
+                </div>
+                <input type="text" class="search-box" id="searchBox" placeholder="Search words...">
+                <div class="word-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Word</th>
+                                <th>Frequency</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wordTableBody">
+                            <tr>
+                                <td colspan="3" class="loading">Loading words...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="mergeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Merge with Similar Word</h3>
+                <button class="close-btn" onclick="CloseMergeModal()">Close</button>
+            </div>
+            <div id="mergeModalContent">
+                <div class="loading">Loading similar words...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allWords = [];
+        let currentMergeWord = null;
+        let removedCount = 0;
+        let mergedCount = 0;
+
+        async function LoadWords() {
+            try {
+                const response = await fetch('/api/words');
+                const data = await response.json();
+                allWords = data.words;
+                RenderWords(allWords);
+                UpdateStats();
+            } catch (error) {
+                console.error('Error loading words:', error);
+            }
+        }
+
+        function RenderWords(words) {
+            const tbody = document.getElementById('wordTableBody');
+            if (words.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No words found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = words.map(item => `
+                <tr>
+                    <td><strong>${item.word}</strong></td>
+                    <td>${item.frequency.toLocaleString()}</td>
+                    <td class="actions">
+                        <button class="btn-remove" onclick="RemoveWord('${item.word}')">Remove</button>
+                        <button class="btn-merge" onclick="OpenMergeModal('${item.word}')">Merge</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function UpdateStats() {
+            document.getElementById('totalWords').textContent = allWords.length.toLocaleString();
+            document.getElementById('removedWordsCount').textContent = removedCount.toLocaleString();
+            document.getElementById('mergedWordsCount').textContent = mergedCount.toLocaleString();
+        }
+
+        async function RemoveWord(word) {
+            const row = event.target.closest('tr');
+            row.style.opacity = '0.5';
+            
+            try {
+                const response = await fetch('/api/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ word })
+                });
+                
+                if (response.ok) {
+                    row.remove();
+                    removedCount++;
+                    allWords = allWords.filter(w => w.word !== word);
+                    UpdateStats();
+                }
+            } catch (error) {
+                console.error('Error removing word:', error);
+                row.style.opacity = '1';
+            }
+        }
+
+        async function OpenMergeModal(word) {
+            currentMergeWord = word;
+            const modal = document.getElementById('mergeModal');
+            const content = document.getElementById('mergeModalContent');
+            
+            modal.classList.add('active');
+            content.innerHTML = '<div class="loading">Loading similar words...</div>';
+
+            try {
+                const response = await fetch('/api/similar-words', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ word })
+                });
+                const data = await response.json();
+                
+                if (data.similarWords.length === 0) {
+                    content.innerHTML = '<div class="empty-state">No added words available for merging</div>';
+                    return;
+                }
+
+                content.innerHTML = data.similarWords.map(item => `
+                    <div class="similar-word-item" onclick="MergeWithWord('${item.word}')">
+                        <div class="similar-word-name">${item.word}</div>
+                        <div class="similar-word-details">
+                            <span>Frequency: ${item.frequency.toLocaleString()}</span>
+                            <span>Similarity: ${item.similarity}%</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading similar words:', error);
+                content.innerHTML = '<div class="empty-state">Error loading similar words</div>';
+            }
+        }
+
+        function CloseMergeModal() {
+            document.getElementById('mergeModal').classList.remove('active');
+            currentMergeWord = null;
+        }
+
+        async function MergeWithWord(targetWord) {
+            try {
+                const response = await fetch('/api/merge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        word: currentMergeWord,
+                        targetWord: targetWord
+                    })
+                });
+                
+                if (response.ok) {
+                    mergedCount++;
+                    removedCount++;
+                }
+                
+                CloseMergeModal();
+                LoadWords();
+            } catch (error) {
+                console.error('Error merging words:', error);
+            }
+        }
+
+        async function ResetAll() {
+            if (confirm('Are you sure you want to reset all removed and merged words?')) {
+                try {
+                    await fetch('/api/reset', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    removedCount = 0;
+                    mergedCount = 0;
+                    LoadWords();
+                } catch (error) {
+                    console.error('Error resetting:', error);
+                }
+            }
+        }
+
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = allWords.filter(item => 
+                item.word.toLowerCase().includes(searchTerm)
+            );
+            RenderWords(filtered);
+        });
+
+        LoadWords();
+    </script>
+</body>
+</html>
