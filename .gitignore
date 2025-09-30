@@ -1,11 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# React
+rigveda-frontend/node_modules/
+rigveda-frontend/build/
+rigveda-frontend/.env
+rigveda-frontend/npm-debug.log*
+rigveda-frontend/yarn-debug.log*
+rigveda-frontend/yarn-error.log*
+
+# Generated data files (keep source but ignore processed)
+entities.json
+entity_relationships_optimized.json
+relationship_matrix.json
+attribute_clusters.json
+relationship_metadata.json
+merged_frequencies.json
+word_groups.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-*.pyw
-*.pyz
-*.pywz
-*.pyzw
-*.pyzwz
-*.pyzwzw
+
+# OS
+Thumbs.db

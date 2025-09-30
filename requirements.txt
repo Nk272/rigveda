@@ -1,0 +1,7 @@
+# Core dependencies for data processing
+nltk>=3.8
+beautifulsoup4>=4.12.0
+requests>=2.32.0
+
+# For relationship builder
+networkx>=3.2.0

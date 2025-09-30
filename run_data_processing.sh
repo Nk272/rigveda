@@ -1,0 +1,31 @@
+#!/bin/bash
+
+echo "=========================================="
+echo "Rigveda Data Processing Script"
+echo "=========================================="
+echo ""
+echo "This will process rigveda_data.json and"
+echo "generate relationship matrices."
+echo ""
+echo "Expected time: 5-15 minutes"
+echo ""
+echo "=========================================="
+echo ""
+
+python3 relationship_builder.py
+
+echo ""
+echo "=========================================="
+echo "Data processing complete!"
+echo "=========================================="
+echo ""
+echo "Generated files:"
+echo "  - entities.json"
+echo "  - attribute_clusters.json"
+echo "  - relationship_matrix.json"
+echo "  - entity_relationships_optimized.json"
+echo "  - relationship_metadata.json"
+echo ""
+echo "Next step: Run ./setup_backend.sh to load"
+echo "           data into Django database"
+echo ""
