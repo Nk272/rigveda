@@ -19,7 +19,7 @@ media/
 staticfiles/
 
 # Word Dashboard
-word_curation.db
+hymn_vectors.db
 
 # React
 rigveda-frontend/node_modules/
