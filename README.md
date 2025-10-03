@@ -100,3 +100,12 @@ rigveda/
 - **Optimized Queries**: Database indexes for fast similarity lookups
 - **Efficient Rendering**: D3.js handles up to 500+ nodes smoothly
 - **Force Simulation**: Configurable physics for optimal layout
+
+
+https://sri-aurobindo.co.in/workings/matherials/rigveda/audio.htm
+Audios
+https://vedaweb.uni-koeln.de/rigveda/view/index/0
+
+
+license
+proritary
