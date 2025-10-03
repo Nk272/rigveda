@@ -115,7 +115,7 @@ def CalculateSimilarity(hymnId1: str, hymnId2: str, metric: str = "cosine") -> f
 
 def CalculateAllPairwiseSimilarities(metric: str = "cosine", minSimilarity: float = 0.0):
     """Calculate pairwise similarities for all hymns"""
-    print(f"Loading all hymn vectors...")
+    print("Loading all hymn vectors...")
     hymns = GetAllHymnVectors()
     hymnIds = list(hymns.keys())
     totalPairs = len(hymnIds) * (len(hymnIds) - 1) // 2

@@ -1,84 +1,102 @@
-# Rig-Veda Scraper & Analysis Tools
+# Rigveda Hymn Similarity Map
+
+An interactive web application for exploring similarities between Rigveda hymns, inspired by [internet-map.net](https://internet-map.net/). The application visualizes hymns as nodes in a force-directed graph where users can click to explore similar hymns.
+
+## Features
+
+- **Interactive Graph Visualization**: Force-directed layout using D3.js
+- **Node Expansion**: Click any hymn to reveal its most similar neighbors
+- **Visual Encoding**: Node size represents hymn score, color represents deity count
+- **Zoom & Pan**: Full navigation controls for exploring the graph
+- **Detailed Information**: Hover tooltips and detailed info panel
+- **Responsive Design**: Works on desktop and mobile devices
 
 ## Quick Start
 
-For complete workflow, see **[WORKFLOW.md](WORKFLOW.md)**
+1. **Install Dependencies**:
+   ```bash
+   uv sync
+   ```
 
+2. **Start the Server**:
+   ```bash
+   uv run python run_server.py
+   ```
+
+3. **Open the Application**:
+   - Frontend: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
+
+## Architecture
+
+### Backend (FastAPI + SQLite)
+- **FastAPI** for REST API endpoints
+- **SQLAlchemy** ORM for database access
+- **SQLite** database with 1,028 hymns and 221,957 similarity relationships
+
+### Frontend (D3.js)
+- **D3.js v7** for interactive graph visualization
+- **Force-directed layout** with customizable forces
+- **Responsive design** with modern UI
+
+### Database Structure
+- `hymn_vectors`: Hymn metadata and deity information
+- `hymn_similarities_cosine`: Pairwise cosine similarities
+- `deity_index`: Deity reference data
+
+## API Endpoints
+
+- `GET /api/nodes` - Get all hymn nodes
+- `GET /api/graph/initial?limit=20` - Get initial graph subset
+- `GET /api/node/{id}?limit=8` - Get hymn and its similar neighbors
+- `GET /health` - Health check endpoint
+
+## Data
+
+The project includes:
+- **1,028 Rigveda hymns** with metadata
+- **221,957 similarity relationships** based on deity co-occurrence
+- **Deity vectors** for each hymn
+- **Hymn scores** based on deity richness
+
+## Development
+
+### Testing
 ```bash
-# 1. Setup (one-time)
-./setup_word_processor.sh
-
-# 2. Process words
-python word_processor.py
-
-# 3. Query results
-python query_word_list.py
-
-# 4. Interactive dashboard (optional)
-python word_dashboard.py
+uv run python test_api.py
 ```
 
-## Tools Available
+### Project Structure
+```
+rigveda/
+├── backend/
+│   └── app/
+│       ├── main.py          # FastAPI application
+│       ├── db.py            # Database connection
+│       ├── models.py        # SQLAlchemy models
+│       ├── crud.py          # Database queries
+│       ├── schemas.py       # Pydantic schemas
+│       └── routes/
+│           └── nodes.py     # API endpoints
+├── frontend/
+│   ├── index.html          # Main HTML page
+│   └── app.js              # D3.js visualization
+├── hymn_vectors.db         # SQLite database
+└── run_server.py           # Server startup script
+```
 
-### 1. Word Processor & Categorizer
-Intelligent word extraction and categorization from all Rigveda hymns.
-- Automatically categorizes words into included, ignored, and combined (hyphenated) groups
-- Named entity recognition for deities and proper nouns
-- Smart merging of similar words (possessives, plurals)
-- Semantic grouping of synonyms
-- SQLite database output with detailed metadata
+## Usage
 
-**Run:** `python word_processor.py`
-**Output:** `word_list.db` with three tables
+1. **Initial View**: The map loads all 1,028 hymns with larger nodes (higher scores) positioned toward the center
+2. **Explore**: Click any node to reveal its 8 most similar hymns
+3. **Navigate**: Use mouse to zoom and pan around the graph
+4. **Information**: Hover over nodes for quick info, click for detailed panel
+5. **Search**: Use the search bar to find specific hymns by title, deity, or book.hymn number
+6. **Controls**: Use the control panel to reset view or center the graph
 
-See `WORD_PROCESSOR_SETUP.md` for detailed documentation.
+## Performance
 
-### 2. Word Analysis Dashboard
-Fast and interactive dashboard for analyzing word frequencies from Rigveda hymns.
-- All words displayed by default with frequencies
-- Lightning-fast Remove operation (async DB writes)
-- Intelligent Merge with similarity matching
-- Search and filter capabilities
-- Beautiful modern UI with real-time stats
-- Persistent SQLite storage
-
-**Run:** `./run_word_dashboard.sh` or `python word_dashboard.py`
-**Access:** http://localhost:5001
-
-See `WORD_DASHBOARD_README.md` for detailed documentation.
-
-### 3. Full Web Application
-Complete Rigveda exploration platform with entity relationships.
-
-**Run:** `./start_all.sh`
-
-See `QUICKSTART.md` for setup instructions.
-
-## Data Structure
-
-### JSON Format
-Books
-    Book_no -> Book_no
-                Name [Title]
-                URL
-                COunt of Hymns
-                Hymns
-                    Hymn_no
-                    Text
-                    Title
-                    URL
-
-### Entites
-Deities, RIshis, Mandalas [10]
-
-Edges (links) show the relationships—for example:
-    "This Rishi composed hymns to this Deity."
-    "This Deity is praised in these Mandalas."
-
-When you click on a Deity node, the interface:
-
-highlights all connected Rishis/Mandalas,
-
-lists the relevant mantras in a side panel,
-
-and lets you play audio of those mantras while a visualizer animates with the sound.
+- **Lazy Loading**: Neighbors loaded on-demand
+- **Optimized Queries**: Database indexes for fast similarity lookups
+- **Efficient Rendering**: D3.js handles up to 500+ nodes smoothly
+- **Force Simulation**: Configurable physics for optimal layout

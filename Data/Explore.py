@@ -4,6 +4,7 @@ import sqlite3
 from pathlib import Path
 
 file_path = "rigveda_data.json"
+db_path = Path(__file__).parent.parent / "hymn_vectors.db"
 
 with open(file_path, "r") as file:
     data = json.load(file)
@@ -17,6 +18,8 @@ def NormalizeWord(word: str) -> str:
     word = word.lower().strip()
     word = re.sub(r"['']s$", '', word)
     word = re.sub(r'[.,;:!?"]', '', word)
+    if word == "brahmaṇaspati":
+        return "bṛhaspati"
     return word
 
 def insertintoTitleMap(deity, ref):
@@ -40,9 +43,6 @@ def get_title_map():
             deity=NormalizeWord(deity)
             if deity in skipList:
                 continue
-            elif deity == "brahmaṇaspati":
-                deity="bṛhaspati"
-                insertintoTitleMap(deity, ref)
             elif len(title)==3:
                 if "-" in deity:
                     deity1=NormalizeWord(deity.split("-")[0])
@@ -72,7 +72,7 @@ def get_title_map():
 
     print(f"Total deities: {len(sorted_title_map)}")
 
-def CreateDatabaseSchema(db_path):
+def CreateDatabaseSchema():
     """Create database schema for hymn vectors"""
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -106,7 +106,7 @@ def CreateDatabaseSchema(db_path):
     conn.close()
     print(f"✓ Database schema created at {db_path}")
 
-def PopulateDeityIndex(db_path, deity_to_index, title_map):
+def PopulateDeityIndex(deity_to_index, title_map):
     """Populate deity index table with deity names, positions, and frequencies"""
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -130,8 +130,6 @@ def NormalizeTextWords(text):
         normalized = NormalizeWord(word)
         if normalized:
             normalized_words.add(normalized)
-            if normalized == "brahmaṇaspati":
-                normalized_words.add("bṛhaspati")
     return normalized_words
 
 def CreateHymnVectors():
@@ -145,11 +143,8 @@ def CreateHymnVectors():
     deity_frequency = {deity: len(refs) for deity, refs in title_map.items()}
     
     print(f"\nGenerating hymn vectors with {len(deity_list)} deities...")
-    
-    db_path = Path(__file__).parent.parent / "hymn_vectors.db"
-    
-    CreateDatabaseSchema(db_path)
-    PopulateDeityIndex(db_path, deity_to_index, title_map)
+    CreateDatabaseSchema()
+    PopulateDeityIndex(deity_to_index, title_map)
     
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -195,29 +190,29 @@ def CreateHymnVectors():
     
     print(f"✓ Stored {total_hymns} hymn vectors in database")
     
-    PrintVectorStatistics(db_path)
+    PrintVectorStatistics()
 
-def PrintVectorStatistics(db_path):
+def PrintVectorStatistics():
     """Print statistics about stored hymn vectors"""
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     cursor.execute('SELECT AVG(deity_count), MIN(deity_count), MAX(deity_count) FROM hymn_vectors')
     avg, min_count, max_count = cursor.fetchone()
-    print(f"\nDeity Count Statistics:")
+    print("\nDeity Count Statistics:")
     print(f"  Average deities per hymn: {avg:.2f}")
     print(f"  Min deities per hymn: {min_count}")
     print(f"  Max deities per hymn: {max_count}")
     
     cursor.execute('SELECT AVG(hymn_score), MIN(hymn_score), MAX(hymn_score) FROM hymn_vectors')
     avg_score, min_score, max_score = cursor.fetchone()
-    print(f"\nHymn Score Statistics:")
+    print("\nHymn Score Statistics:")
     print(f"  Average hymn score: {avg_score:.2f}")
     print(f"  Min hymn score: {min_score:.2f}")
     print(f"  Max hymn score: {max_score:.2f}")
     
     cursor.execute('SELECT hymn_id, title, deity_names, deity_count, hymn_score FROM hymn_vectors ORDER BY hymn_score DESC LIMIT 5')
-    print(f"\nTop 5 hymns by score (sum of deity frequencies):")
+    print("\nTop 5 hymns by score (sum of deity frequencies):")
     for hymn_id, title, deity_names, count, score in cursor.fetchall():
         deities = json.loads(deity_names)
         print(f"  Hymn {hymn_id}: {title}")

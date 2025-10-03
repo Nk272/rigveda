@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rigveda Hymn Similarity Map</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            overflow: hidden;
+        }
+
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        #controls h2 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            color: #ffffff;
+        }
+
+        #controls button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        #controls button:hover {
+            background: #45a049;
+        }
+
+        #controls button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        #info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+            display: none;
+        }
+
+        #info h3 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+
+        #info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        #graph {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            stroke: #fff;
+            stroke-width: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .node:hover {
+            stroke-width: 3px;
+            stroke: #4CAF50;
+        }
+
+        .node.selected {
+            stroke: #ff6b6b;
+            stroke-width: 4px;
+        }
+
+        .link {
+            stroke: rgba(255, 255, 255, 0.6);
+            stroke-width: 1px;
+            fill: none;
+        }
+
+        .node-label {
+            font-size: 12px;
+            fill: white;
+            text-anchor: middle;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1001;
+            max-width: 250px;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="controls">
+            <h2>Rigveda Hymn Map</h2>
+            <button id="resetBtn">Reset View</button>
+            <button id="centerBtn">Center Graph</button>
+            
+            <div style="margin-top: 15px;">
+                <input type="text" id="searchInput" placeholder="Search hymns..." 
+                       style="width: 200px; padding: 5px; border: none; border-radius: 3px; background: rgba(255,255,255,0.9); color: #333;">
+                <div id="searchResults" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.9); border-radius: 5px; margin-top: 5px; display: none;"></div>
+            </div>
+            
+            <div style="margin-top: 10px;">
+                <small>All 1,028 hymns loaded • Click nodes to explore similar hymns</small>
+            </div>
+        </div>
+
+        <div id="info">
+            <h3 id="infoTitle">Hymn Details</h3>
+            <p><strong>Book:</strong> <span id="infoBook"></span></p>
+            <p><strong>Hymn:</strong> <span id="infoHymn"></span></p>
+            <p><strong>Score:</strong> <span id="infoScore"></span></p>
+            <p><strong>Deities:</strong> <span id="infoDeities"></span></p>
+            <p><strong>Deity Count:</strong> <span id="infoDeityCount"></span></p>
+        </div>
+
+        <div class="loading" id="loading">Loading all 1,028 hymns...</div>
+        <svg id="graph"></svg>
+    </div>
+
+    <script src="app.js?v=3"></script>
+</body>
+</html>

@@ -48,7 +48,7 @@ def PlotScoreDistribution():
     
     plt.tight_layout()
     
-    output_path = Path(__file__).parent.parent / "hymn_score_distribution.png"
+    output_path = Path(__file__).parent.parent / "Viz/hymn_score_distribution.png"
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"✓ Plot saved to: {output_path}")
     
@@ -86,7 +86,7 @@ def PlotScoreDistributionBinned(bin_size=50):
     
     plt.tight_layout()
     
-    output_path = Path(__file__).parent.parent / f"hymn_score_distribution_binned_{bin_size}.png"
+    output_path = Path(__file__).parent.parent / f"Viz/hymn_score_distribution_binned_{bin_size}.png"
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"✓ Plot saved to: {output_path}")
     
@@ -119,7 +119,7 @@ def PlotDeityCountVsScore():
     plt.legend(fontsize=10)
     plt.tight_layout()
     
-    output_path = Path(__file__).parent.parent / "deity_count_vs_score.png"
+    output_path = Path(__file__).parent.parent / "Viz/deity_count_vs_score.png"
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"✓ Plot saved to: {output_path}")
     
@@ -140,12 +140,12 @@ def PrintScoreStatistics():
     print(f"Min Score: {min(scores):.0f}")
     print(f"Max Score: {max(scores):.0f}")
     
-    print(f"\nPercentiles:")
+    print("\nPercentiles:")
     for p in [25, 50, 75, 90, 95, 99]:
         print(f"  {p}th: {np.percentile(scores, p):.2f}")
     
     score_counts = Counter(scores)
-    print(f"\nScore Distribution:")
+    print("\nScore Distribution:")
     print(f"  Hymns with score 0: {score_counts[0]}")
     print(f"  Hymns with score < 100: {sum(1 for s in scores if s < 100)}")
     print(f"  Hymns with score 100-500: {sum(1 for s in scores if 100 <= s < 500)}")
