@@ -13,34 +13,24 @@ backend_path = Path(__file__).parent / "backend"
 sys.path.insert(0, str(backend_path))
 
 def main():
-    print("🕉️  Rigveda Hymn Similarity Map - Demo")
+    print("🕉️  Rigveda Hymn Similarity Map")
     print("=" * 50)
     print()
     print("This interactive web application visualizes 1,028 Rigveda hymns")
     print("as an explorable network based on deity co-occurrence patterns.")
-    print()
-    print("✨ Features:")
-    print("  • All 1,028 hymns displayed in interactive force-directed graph")
-    print("  • Node size proportional to hymn score")
-    print("  • Higher-scoring hymns positioned toward center")
-    print("  • Click nodes to reveal 8 most similar hymns")
-    print("  • Search functionality across all hymns")
-    print("  • Zoom, pan, and drag interactions")
-    print("  • Color coding by deity count")
-    print("  • Hover tooltips with detailed information")
-    print()
-    
-    # Test database
+
     try:
         from app.db import GetDatabase
         from app import crud
+
+        print("Getting database")
         
         db = next(GetDatabase())
         hymnCount = len(crud.GetAllHymns(db))
         topHymn = crud.GetTopHymnsByScore(db, 1)[0]
         db.close()
         
-        print(f"📊 Database Status:")
+        print("📊 Database Status:")
         print(f"  • {hymnCount:,} hymns loaded")
         print(f"  • Top hymn: {topHymn.title} (Score: {topHymn.hymn_score})")
         print()
@@ -80,7 +70,7 @@ def main():
             "app.main:app",
             host="0.0.0.0",
             port=8000,
-            reload=False,
+            reload=True,
             log_level="info"
         )
         

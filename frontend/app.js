@@ -1,6 +1,7 @@
 class HymnSimilarityMap 
 {
-    constructor() {
+    constructor() 
+    {
         console.log('Initializing HymnSimilarityMap...');
         this.width = window.innerWidth;
         this.height = window.innerHeight;
@@ -22,7 +23,8 @@ class HymnSimilarityMap
         this.LoadInitialData();
     }
 
-    InitializeSvg() {
+    InitializeSvg() 
+    {
         console.log('Initializing SVG...');
         this.svg = d3.select("#graph")
             .attr("width", this.width)
@@ -476,20 +478,20 @@ class HymnSimilarityMap
     }
 
     DragStarted(event, d) {
-        if (!event.active) this.simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
+        // if (!event.active) this.simulation.alphaTarget(0.3).restart();
+        // d.fx = d.x;
+        // d.fy = d.y;
     }
 
     Dragged(event, d) {
-        d.fx = event.x;
-        d.fy = event.y;
+        // d.fx = event.x;
+        // d.fy = event.y;
     }
 
     DragEnded(event, d) {
-        if (!event.active) this.simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
+        // if (!event.active) this.simulation.alphaTarget(0);
+        // d.fx = null;
+        // d.fy = null;
     }
 
     ResetView() {

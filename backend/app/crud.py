@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, desc
+from sqlalchemy import or_, desc
 from typing import List, Optional
-from . import models, schemas
+from . import models
 
 def GetAllHymns(db: Session) -> List[models.HymnVector]:
     return db.query(models.HymnVector).order_by(models.HymnVector.book_number, models.HymnVector.hymn_number).all()
