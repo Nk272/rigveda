@@ -1,6 +1,9 @@
 # Rigveda Hymn Similarity Map
 
 An interactive web application for exploring similarities between Rigveda hymns inspired by [internet-map.net](https://internet-map.net/). The application visualizes 1,028 hymns as an explorable network based on deity co-occurrence patterns, allowing users to discover connections between hymns through an intuitive force-directed graph interface.
+10 books, 1028 hymns, 15175 Words
+neighbor, color and clustering logic
+Paths??
 
 ## Table of Contents
 - [Features](#features)

@@ -14,12 +14,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API routes
-app.include_router(nodes.router, prefix="/api")
-
-# Serve static files (frontend)
-app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
-
+# Health check endpoint
 @app.get("/health")
 def HealthCheck():
     return {"status": "healthy"}
+
+# Include API routes
+app.include_router(nodes.router, prefix="/api")
+
+# Serve static files (frontend) - must be last as catch-all
+app.mount("/", StaticFiles(directory="frontend", html=True), name="static")

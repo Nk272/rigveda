@@ -152,11 +152,38 @@ def PrintScoreStatistics():
     print(f"  Hymns with score 500-1000: {sum(1 for s in scores if 500 <= s < 1000)}")
     print(f"  Hymns with score >= 1000: {sum(1 for s in scores if s >= 1000)}")
 
+def PlotHymnsPerBook():
+    """Plot number of hymns in each book"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT book_number, COUNT(*) FROM hymn_vectors GROUP BY book_number ORDER BY book_number')
+    rows = cursor.fetchall()
+    conn.close()
+
+    books = [row[0] for row in rows]
+    counts = [row[1] for row in rows]
+
+    plt.figure(figsize=(12, 6))
+    plt.bar(books, counts, color='steelblue', edgecolor='navy', alpha=0.8)
+    plt.xlabel('Book Number', fontsize=12)
+    plt.ylabel('Number of Hymns', fontsize=12)
+    plt.title('Hymns per Book', fontsize=14, fontweight='bold')
+    plt.xticks(books)
+    plt.grid(axis='y', alpha=0.3, linestyle='--')
+    plt.tight_layout()
+
+    output_path = Path(__file__).parent/"hymns_per_book.png"
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✓ Plot saved to: {output_path}")
+
+    plt.show()
+
 def main():
     print("Rigveda Hymn Score Visualization")
     print("="*60)
     
     PrintScoreStatistics()
+    PlotHymnsPerBook()
     
     print("\nGenerating visualizations...")
     PlotScoreDistribution()
