@@ -8,9 +8,12 @@ from typing import Any, Deque, Dict, List, Tuple
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-
+MAX_REQUESTS_PER_MINUTE = 30
+MAX_TOKENS_PER_MINUTE = 8000
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-
+PER_CALL_DELAY_SECONDS = 60
+inputPath = "/Users/nikunjgoyal/Codes/rigveda/Data/JSONMaps/rigveda_data.json"
+outputPath = "/Users/nikunjgoyal/Codes/rigveda/Data/JSONMaps/rigveda_summaries.json"
 
 def LoadJson(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
@@ -86,9 +89,9 @@ def SendWithRetries(fn, maxAttempts: int = 8, baseDelaySeconds: float = 1.5) -> 
                     try:
                         delay = float(retryAfter)
                     except ValueError:
-                        delay = baseDelaySeconds * (2 ** (attempt - 1))
+                        delay = baseDelaySeconds * attempt
                 else:
-                    delay = baseDelaySeconds * (2 ** (attempt - 1))
+                    delay = baseDelaySeconds * attempt
                 delay += random.uniform(0, 0.5)
                 Log(f"request: transient error status={status}, attempt={attempt}, sleeping={delay:.2f}s")
                 time.sleep(delay)
@@ -96,13 +99,8 @@ def SendWithRetries(fn, maxAttempts: int = 8, baseDelaySeconds: float = 1.5) -> 
             Log(f"request: non-retryable HTTP error status={status}, attempt={attempt}")
             raise
         except URLError:
-            attempt += 1
-            if attempt >= maxAttempts:
-                Log(f"request: URLError, failed after {attempt} attempts")
-                raise
-            delay = baseDelaySeconds * (2 ** (attempt - 1)) + random.uniform(0, 0.5)
-            Log(f"request: URLError, attempt={attempt}, sleeping={delay:.2f}s")
-            time.sleep(delay)
+            Log(f"request: URLError, attempt={attempt}")
+            raise
 
 
 def SummarizeHymn(apiKey: str, hymnText: str) -> Tuple[str, Dict[str, Any]]:
@@ -119,14 +117,6 @@ def IterateHymns(data: Dict[str, Any]):
             hymn = hymns[hymnId]
             text = hymn.get("text", "") or ""
             yield hymnId, text
-
-
-def EstimateTokens(hymnText: str) -> int:
-    charCount = len(hymnText)
-    estimatedPrompt = max(1, int(charCount / 4)) + 80
-    estimatedCompletion = 64
-    return estimatedPrompt + estimatedCompletion
-
 
 class RateLimiter:
     def __init__(self, maxRequestsPerMinute: int = 30, maxTokensPerMinute: int = 8000) -> None:
@@ -192,26 +182,7 @@ def Main() -> None:
         print("GROQ_API_KEY is required in environment", file=sys.stderr)
         sys.exit(1)
 
-    args = sys.argv[1:]
-    limitCount = 750
-    filteredArgs: List[str] = []
-    for a in args:
-        if a in ("--test", "-t"):
-            limitCount = 2
-            continue
-        filteredArgs.append(a)
-
-    inputPath = (
-        filteredArgs[0]
-        if len(filteredArgs) > 0
-        else "/Users/nikunjgoyal/Codes/rigveda/Data/JSONMaps/rigveda_data.json"
-    )
-    outputPath = (
-        filteredArgs[1]
-        if len(filteredArgs) > 1
-        else "/Users/nikunjgoyal/Codes/rigveda/Data/JSONMaps/rigveda_summaries.json"
-    )
-    perCallDelaySeconds = float(filteredArgs[2]) if len(filteredArgs) > 2 else 0.0
+    perCallDelaySeconds = PER_CALL_DELAY_SECONDS
 
     data = LoadJson(inputPath)
     summaries: Dict[str, str] = {}
@@ -228,30 +199,24 @@ def Main() -> None:
     total = 0
     processed = 0
     skipped = 0
+    processedTarget = 1028
     for _ in IterateHymns(data):
         total += 1
 
     limiter = RateLimiter(maxRequestsPerMinute=30, maxTokensPerMinute=8000)
 
-    processedTarget = limitCount if limitCount is not None else total
     for hymnId, text in IterateHymns(data):
-        if limitCount is not None and processed >= processedTarget:
-            break
-        if not text:
-            skipped += 1
-            Log(f"skip: empty text hymnId={hymnId}")
-            continue
         if hymnId in summaries and summaries[hymnId]:
             skipped += 1
+            processed += 1
             Log(f"skip: already summarized hymnId={hymnId}")
             continue
-        neededTokens = EstimateTokens(text)
-        Log(f"prepare: hymnId={hymnId} estTokens={neededTokens} processed={processed}/{processedTarget}")
-        limiter.WaitForCapacity(neededTokens)
+
+        Log(f"prepare: hymnId={hymnId} processed={processed}/{processedTarget}")
         Log(f"send: hymnId={hymnId}")
         summary, raw = SummarizeHymn(apiKey, text)
         summaries[hymnId] = summary
-        usedTokens = neededTokens
+        usedTokens = 0
         try:
             usage = raw.get("usage")
             if isinstance(usage, dict):
@@ -262,16 +227,10 @@ def Main() -> None:
             pass
         limiter.Record(usedTokens)
         processed += 1
-        Log(
-            f"done: hymnId={hymnId} usedTokens={usedTokens} summaryChars={len(summary)}"
-        )
-        if perCallDelaySeconds > 0:
-            time.sleep(perCallDelaySeconds)
-        if processed % 10 == 0:
-            SaveJson(outputPath, summaries)
-            print(f"processed={processed} skipped={skipped} of target={processedTarget}")
-
-    SaveJson(outputPath, summaries)
+        Log(f"done: hymnId={hymnId} usedTokens={usedTokens} summaryChars={len(summary)}")
+        Log(f"post-request: sleeping {perCallDelaySeconds}s")
+        time.sleep(perCallDelaySeconds)
+        SaveJson(outputPath, summaries)    
     print(json.dumps({"total": total, "processed": processed, "skipped": skipped}, ensure_ascii=False))
 
 
