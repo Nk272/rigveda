@@ -1,0 +1,142 @@
+{
+  "0": {
+    "deity_id": 0,
+    "deity_name": "indra",
+    "color": "#E74C3C",
+    "hymn_count": 378,
+    "text_frequency": 2913
+  },
+  "1": {
+    "deity_id": 1,
+    "deity_name": "agni",
+    "color": "#F39C12",
+    "hymn_count": 252,
+    "text_frequency": 1975
+  },
+  "2": {
+    "deity_id": 2,
+    "deity_name": "soma",
+    "color": "#9B59B6",
+    "hymn_count": 142,
+    "text_frequency": 1552
+  },
+  "5": {
+    "deity_id": 5,
+    "deity_name": "a\u015bvins",
+    "color": "#3498DB",
+    "hymn_count": 59,
+    "text_frequency": 469
+  },
+  "6": {
+    "deity_id": 6,
+    "deity_name": "varu\u1e47a",
+    "color": "#1ABC9C",
+    "hymn_count": 54,
+    "text_frequency": 577
+  },
+  "7": {
+    "deity_id": 7,
+    "deity_name": "maruts",
+    "color": "#2ECC71",
+    "hymn_count": 40,
+    "text_frequency": 517
+  },
+  "13": {
+    "deity_id": 13,
+    "deity_name": "savitar",
+    "color": "#E67E22",
+    "hymn_count": 19,
+    "text_frequency": 191
+  },
+  "12": {
+    "deity_id": 12,
+    "deity_name": "\u1e5bbhus",
+    "color": "#95A5A6",
+    "hymn_count": 12,
+    "text_frequency": 85
+  },
+  "10": {
+    "deity_id": 10,
+    "deity_name": "b\u1e5bhaspati",
+    "color": "#34495E",
+    "hymn_count": 11,
+    "text_frequency": 140
+  },
+  "11": {
+    "deity_id": 11,
+    "deity_name": "v\u0101yu",
+    "color": "#16A085",
+    "hymn_count": 10,
+    "text_frequency": 160
+  },
+  "14": {
+    "deity_id": 14,
+    "deity_name": "p\u016b\u1e63an",
+    "color": "#27AE60",
+    "hymn_count": 10,
+    "text_frequency": 141
+  },
+  "16": {
+    "deity_id": 16,
+    "deity_name": "s\u016brya",
+    "color": "#F1C40F",
+    "hymn_count": 10,
+    "text_frequency": 204
+  },
+  "15": {
+    "deity_id": 15,
+    "deity_name": "\u0101pr\u012bs",
+    "color": "#8E44AD",
+    "hymn_count": 9,
+    "text_frequency": 9
+  },
+  "20": {
+    "deity_id": 20,
+    "deity_name": "\u0101dityas",
+    "color": "#C0392B",
+    "hymn_count": 8,
+    "text_frequency": 130
+  },
+  "21": {
+    "deity_id": 21,
+    "deity_name": "rudra",
+    "color": "#D35400",
+    "hymn_count": 5,
+    "text_frequency": 155
+  },
+  "17": {
+    "deity_id": 17,
+    "deity_name": "vi\u1e63\u1e47u",
+    "color": "#2980B9",
+    "hymn_count": 4,
+    "text_frequency": 113
+  },
+  "8": {
+    "deity_id": 8,
+    "deity_name": "mitra",
+    "color": "#7F8C8D",
+    "hymn_count": 3,
+    "text_frequency": 435
+  },
+  "3": {
+    "deity_id": 3,
+    "deity_name": "pavamana",
+    "color": "#BDC3C7",
+    "hymn_count": 2,
+    "text_frequency": 251
+  },
+  "23": {
+    "deity_id": 23,
+    "deity_name": "vaikuntha",
+    "color": "#E8DAEF",
+    "hymn_count": 0,
+    "text_frequency": 4
+  },
+  "24": {
+    "deity_id": 24,
+    "deity_name": "indra-v\u0101yu",
+    "color": "#AED6F1",
+    "hymn_count": 0,
+    "text_frequency": 15
+  }
+}

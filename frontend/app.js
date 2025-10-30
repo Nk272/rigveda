@@ -66,7 +66,9 @@ class HymnSimilarityMap
             .force("collision", d3.forceCollide()
                 .radius(d => this.GetNodeRadius(d) + 2)
                 .strength(0.7)
-            );
+            )
+            // Cluster by deity
+            .force("cluster", this.CreateClusterForce());
     }
 
     InitializeTooltip() {
@@ -185,41 +187,82 @@ class HymnSimilarityMap
         }
     }
 
-    PositionNodesByScore(nodes) {
-        console.log(`Positioning ${nodes.length} nodes by score`);
-        
-        // Sort nodes by hymn score (descending) - don't mutate original
-        const sortedNodes = [...nodes].sort((a, b) => b.hymn_score - a.hymn_score);
-        
+    CreateClusterForce() {
+        const strength = 0.3;
+        return alpha => {
+            const centroids = this.CalculateDeityCentroids();
+            this.allNodes.forEach(node => {
+                if (node.primary_deity_id !== null && centroids[node.primary_deity_id]) {
+                    const centroid = centroids[node.primary_deity_id];
+                    node.vx -= (node.x - centroid.x) * strength * alpha;
+                    node.vy -= (node.y - centroid.y) * strength * alpha;
+                }
+            });
+        };
+    }
+
+    CalculateDeityCentroids() {
+        // Group nodes by deity
+        const deityGroups = {};
+        this.allNodes.forEach(node => {
+            if (node.primary_deity_id !== null) {
+                if (!deityGroups[node.primary_deity_id]) {
+                    deityGroups[node.primary_deity_id] = [];
+                }
+                deityGroups[node.primary_deity_id].push(node);
+            }
+        });
+
+        // Calculate centroid positions - major deities in center
         const centerX = this.width / 2;
         const centerY = this.height / 2;
-        
-        console.log(`Center position: ${centerX}, ${centerY}`);
-        
-        sortedNodes.forEach((node, index) => {
-            if (index < 50) {
-                // Top 50 nodes: position in tight center circle
-                const angle = (index / 50) * 2 * Math.PI;
-                const radius = 50 + (index / 50) * 100;
-                node.x = centerX + Math.cos(angle) * radius;
-                node.y = centerY + Math.sin(angle) * radius;
-            } else if (index < 200) {
-                // Next 150 nodes: middle ring
-                const angle = ((index - 50) / 150) * 2 * Math.PI;
-                const radius = 200 + ((index - 50) / 150) * 150;
-                node.x = centerX + Math.cos(angle) * radius;
-                node.y = centerY + Math.sin(angle) * radius;
-            } else {
-                // Remaining nodes: outer area with some randomness
+        const centroids = {};
+
+        // Sort deities by hymn count
+        const deityIds = Object.keys(deityGroups).map(Number);
+        const deityCounts = deityIds.map(id => ({
+            id,
+            count: deityGroups[id].length
+        })).sort((a, b) => b.count - a.count);
+
+        // Position major deities (more hymns) toward center
+        deityCounts.forEach((deity, index) => {
+            const angle = (index / deityCounts.length) * 2 * Math.PI;
+            // Smaller radius for deities with more hymns
+            const radiusFactor = Math.sqrt(index / deityCounts.length);
+            const radius = 100 + radiusFactor * 400;
+            centroids[deity.id] = {
+                x: centerX + Math.cos(angle) * radius,
+                y: centerY + Math.sin(angle) * radius
+            };
+        });
+
+        return centroids;
+    }
+
+    PositionNodesByScore(nodes) {
+        console.log(`Positioning ${nodes.length} nodes by deity clusters`);
+
+        const centerX = this.width / 2;
+        const centerY = this.height / 2;
+
+        // Calculate deity centroids
+        const centroids = this.CalculateDeityCentroids();
+
+        // Position nodes near their deity centroid
+        nodes.forEach((node, index) => {
+            if (node.primary_deity_id !== null && centroids[node.primary_deity_id]) {
+                const centroid = centroids[node.primary_deity_id];
                 const angle = Math.random() * 2 * Math.PI;
-                const radius = 400 + Math.random() * 300;
+                const radius = Math.random() * 80;
+                node.x = centroid.x + Math.cos(angle) * radius;
+                node.y = centroid.y + Math.sin(angle) * radius;
+            } else {
+                // Fallback for nodes without deity
+                const angle = Math.random() * 2 * Math.PI;
+                const radius = 400 + Math.random() * 200;
                 node.x = centerX + Math.cos(angle) * radius;
                 node.y = centerY + Math.sin(angle) * radius;
-            }
-            
-            // Log first few positions for debugging
-            if (index < 3) {
-                console.log(`Node ${index} (${node.id}): x=${node.x.toFixed(1)}, y=${node.y.toFixed(1)}, score=${node.hymn_score}`);
             }
         });
     }
@@ -246,62 +289,35 @@ class HymnSimilarityMap
     }
 
     GetNodeColor(node) {
-        // Color based on deity count
-        const colors = [
-            "#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4", 
-            "#ffeaa7", "#dda0dd", "#98d8c8", "#f7dc6f"
-        ];
-        return colors[node.deity_count % colors.length] || "#95a5a6";
+        // Use deity color from API
+        return node.deity_color || "#95a5a6";
     }
 
     async OnNodeClick(nodeId) {
         if (this.pendingRequests.has(nodeId)) return;
-        
+
         this.pendingRequests.add(nodeId);
-        d3.select("#loading").style("display", "block").text("Loading similar hymns...");
+        d3.select("#loading").style("display", "block").text("Loading hymn details...");
 
         try {
-            const response = await fetch(`/api/node/${nodeId}?limit=8`);
+            const response = await fetch(`/api/node/${nodeId}?limit=4`);
             const data = await response.json();
-
-            // Arrange neighbors in a ring around clicked node
-            const center = this.nodes.get(nodeId);
-            const neighbors = data.neighbors;
-            const ringRadius = 160;
-
-            neighbors.forEach((nb, i) => {
-                const angle = (i / Math.max(1, neighbors.length)) * Math.PI * 2;
-                const nx = center.x + Math.cos(angle) * ringRadius;
-                const ny = center.y + Math.sin(angle) * ringRadius;
-
-                const existing = this.nodes.get(nb.id);
-                const positioned = {
-                    ...(existing || nb),
-                    x: nx,
-                    y: ny,
-                    fx: nx,
-                    fy: ny
-                };
-                this.nodes.set(nb.id, positioned);
-
-                const linkId = `${nodeId}-${nb.id}`;
-                if (!this.links.has(linkId)) {
-                    this.links.set(linkId, { source: nodeId, target: nb.id, similarity: nb.similarity });
-                }
-            });
-
-            // Fix center node position for focus layout
-            center.fx = center.x;
-            center.fy = center.y;
 
             // Update selected node
             this.selectedNode = nodeId;
             this.focusNodeId = nodeId;
-            this.focusNeighborIds = new Set(neighbors.map(n => n.id));
-            this.isFocusMode = true;
+            this.focusNeighborIds = new Set(data.neighbors.map(n => n.id));
+            this.isFocusMode = false; // Don't fade other nodes
             this.UpdateVisualization();
-            this.ShowNodeInfo(data.node);
-            this.FocusViewportOnNode(center, 2.2);
+
+            // Show hymn info with summary and similar hymns
+            this.ShowNodeInfoWithSummary(data.node, data.neighbors, nodeId);
+
+            // Focus viewport on node
+            const center = this.nodes.get(nodeId);
+            if (center) {
+                this.FocusViewportOnNode(center, 2);
+            }
 
         } catch (error) {
             console.error('Error loading node data:', error);
@@ -430,7 +446,6 @@ class HymnSimilarityMap
     }
 
     ClearFocusMode() {
-        if (!this.isFocusMode) return;
         const center = this.nodes.get(this.focusNodeId);
         if (center) { center.fx = null; center.fy = null; }
         this.focusNeighborIds.forEach(id => {
@@ -441,6 +456,15 @@ class HymnSimilarityMap
         this.focusNodeId = null;
         this.focusNeighborIds = new Set();
         this.selectedNode = null;
+        this.HideInfoPanel();
+        this.UpdateVisualization();
+    }
+
+    CloseInfoPanel() {
+        this.selectedNode = null;
+        this.focusNodeId = null;
+        this.focusNeighborIds = new Set();
+        this.isFocusMode = false;
         this.HideInfoPanel();
         this.UpdateVisualization();
     }
@@ -471,6 +495,93 @@ class HymnSimilarityMap
         d3.select("#infoScore").text(node.hymn_score.toFixed(1));
         d3.select("#infoDeities").text(node.deity_names || "Unknown");
         d3.select("#infoDeityCount").text(node.deity_count);
+    }
+
+    async ShowNodeInfoWithSummary(node, neighbors, nodeId) {
+        const infoPanel = d3.select("#info");
+        infoPanel.style("display", "block");
+
+        // Fetch summary for the main hymn
+        let summary = "Loading summary...";
+        try {
+            const summaryResponse = await fetch('/Data/JSONMaps/rigveda_summaries.json');
+            const summaries = await summaryResponse.json();
+            summary = summaries[nodeId] || "Summary not available.";
+        } catch (error) {
+            console.error('Error loading summary:', error);
+            summary = "Summary not available.";
+        }
+
+        // Build similar hymns HTML
+        const similarHymnsHtml = neighbors.map((nb, idx) => `
+            <div style="
+                padding: 10px;
+                margin: 8px 0;
+                background: rgba(255, 255, 255, 0.05);
+                border-left: 3px solid ${nb.deity_color};
+                border-radius: 3px;
+                cursor: pointer;
+                transition: background 0.2s;
+            "
+            onmouseover="this.style.background='rgba(255,255,255,0.1)'"
+            onmouseout="this.style.background='rgba(255,255,255,0.05)'"
+            onclick="window.hymnMap.OnNodeClick('${nb.id}')">
+                <strong>${idx + 1}. ${nb.title}</strong><br>
+                <small>Book ${nb.book_number}, Hymn ${nb.hymn_number} • Similarity: ${(nb.similarity * 100).toFixed(1)}%</small><br>
+                <em style="font-size: 11px; color: #bbb;">${nb.summary.substring(0, 150)}${nb.summary.length > 150 ? '...' : ''}</em>
+            </div>
+        `).join('');
+
+        infoPanel.html(`
+            <div style="max-height: calc(100vh - 100px); overflow-y: auto;">
+                <h3 style="margin: 0 0 10px 0; color: ${node.deity_color}; border-bottom: 2px solid ${node.deity_color}; padding-bottom: 5px;">
+                    ${node.title}
+                </h3>
+                <p style="margin: 5px 0; font-size: 13px;">
+                    <strong>Book:</strong> ${node.book_number} &nbsp;|&nbsp;
+                    <strong>Hymn:</strong> ${node.hymn_number}<br>
+                    <strong>Deities:</strong> ${node.deity_names || "Unknown"}<br>
+                    <strong>Score:</strong> ${node.hymn_score.toFixed(1)}
+                </p>
+
+                <div style="
+                    margin: 15px 0;
+                    padding: 12px;
+                    background: rgba(0, 0, 0, 0.3);
+                    border-radius: 5px;
+                    border-left: 3px solid ${node.deity_color};
+                ">
+                    <h4 style="margin: 0 0 8px 0; color: #4CAF50;">Summary</h4>
+                    <p style="font-size: 13px; line-height: 1.5; margin: 0;">
+                        ${summary}
+                    </p>
+                </div>
+
+                <h4 style="margin: 15px 0 10px 0; color: #4CAF50;">
+                    4 Most Similar Hymns
+                </h4>
+                ${similarHymnsHtml}
+
+                <button
+                    onclick="window.hymnMap.CloseInfoPanel()"
+                    style="
+                        width: 100%;
+                        margin-top: 15px;
+                        padding: 10px;
+                        background: #e74c3c;
+                        color: white;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 14px;
+                    "
+                    onmouseover="this.style.background='#c0392b'"
+                    onmouseout="this.style.background='#e74c3c'"
+                >
+                    Close
+                </button>
+            </div>
+        `);
     }
 
     HideInfoPanel() {
@@ -562,5 +673,5 @@ class HymnSimilarityMap
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing Hymn Similarity Map...');
-    new HymnSimilarityMap();
+    window.hymnMap = new HymnSimilarityMap();
 });

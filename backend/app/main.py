@@ -22,5 +22,8 @@ def HealthCheck():
 # Include API routes
 app.include_router(nodes.router, prefix="/api")
 
+# Serve Data directory for JSON files
+app.mount("/Data", StaticFiles(directory="Data"), name="data")
+
 # Serve static files (frontend) - must be last as catch-all
 app.mount("/", StaticFiles(directory="frontend", html=True), name="static")

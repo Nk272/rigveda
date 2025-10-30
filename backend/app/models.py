@@ -14,6 +14,7 @@ class HymnVector(Base):
     deity_names = Column(Text)
     deity_count = Column(Integer)
     hymn_score = Column(Float)
+    primary_deity_id = Column(Integer)
 
 class HymnSimilarity(Base):
     __tablename__ = "hymn_similarities_cosine"
@@ -29,3 +30,4 @@ class DeityIndex(Base):
     deity_name = Column(String, unique=True)
     vector_position = Column(Integer)
     deity_frequency = Column(Integer)
+    deity_color = Column(String)
