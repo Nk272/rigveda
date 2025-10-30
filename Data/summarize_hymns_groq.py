@@ -11,7 +11,7 @@ from urllib.request import Request, urlopen
 MAX_REQUESTS_PER_MINUTE = 30
 MAX_TOKENS_PER_MINUTE = 8000
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-PER_CALL_DELAY_SECONDS = 60
+PER_CALL_DELAY_SECONDS = 10
 inputPath = "/Users/nikunjgoyal/Codes/rigveda/Data/JSONMaps/rigveda_data.json"
 outputPath = "/Users/nikunjgoyal/Codes/rigveda/Data/JSONMaps/rigveda_summaries.json"
 
@@ -187,22 +187,16 @@ def Main() -> None:
     data = LoadJson(inputPath)
     summaries: Dict[str, str] = {}
     if os.path.exists(outputPath):
-        try:
-            existing = LoadJson(outputPath)
-            if isinstance(existing, dict):
-                for k, v in existing.items():
-                    if isinstance(v, str):
-                        summaries[k] = v
-        except Exception:
-            pass
+        existing = LoadJson(outputPath)
+        for k, v in existing.items():
+            summaries[k] = v
+    else:
+        print(f"output file {outputPath} does not exist")
+        sys.exit(1)
 
-    total = 0
+    total = 1028
     processed = 0
     skipped = 0
-    processedTarget = 1028
-    for _ in IterateHymns(data):
-        total += 1
-
     limiter = RateLimiter(maxRequestsPerMinute=30, maxTokensPerMinute=8000)
 
     for hymnId, text in IterateHymns(data):
@@ -212,7 +206,7 @@ def Main() -> None:
             Log(f"skip: already summarized hymnId={hymnId}")
             continue
 
-        Log(f"prepare: hymnId={hymnId} processed={processed}/{processedTarget}")
+        Log(f"prepare: hymnId={hymnId} processed={processed}/{total}")
         Log(f"send: hymnId={hymnId}")
         summary, raw = SummarizeHymn(apiKey, text)
         summaries[hymnId] = summary
