@@ -504,6 +504,55 @@ class HymnSimilarityMap
         return node.deity_color || "#95a5a6";
     }
 
+    GetHindiTranslationUrl(bookNumber, hymnNumber) {
+        const hymnStr = String(hymnNumber).padStart(3, '0');
+        const prefix = Number(bookNumber) === 10 ? '' : `0f`;
+        return `https://sacred-texts.com/hin/rvsan/rv${prefix}${hymnStr}.htm`;
+    }
+
+	OpenHindiOriginal(bookNumber, hymnNumber) {
+		const url = this.GetHindiTranslationUrl(bookNumber, hymnNumber);
+		window.open(url, '_blank', 'noopener');
+	}
+
+    async ToggleEnglishTranslation(bookNumber, nodeId) {
+        const containerId = `english-trans-${nodeId}`;
+        const buttonId = `english-btn-${nodeId}`;
+        const container = document.getElementById(containerId);
+        const button = document.getElementById(buttonId);
+        if (!container || !button) return;
+
+        const isVisible = container.style.display !== 'none' && container.style.display !== '';
+        if (isVisible) {
+            container.style.display = 'none';
+            button.textContent = 'Show English Translation';
+            return;
+        }
+
+        // Load once if not loaded
+        if (!container.dataset.loaded) {
+            try {
+                const hymnPath = `/Data/rigveda_texts/book_${bookNumber}/hymn_${nodeId}.txt`;
+                const textResponse = await fetch(hymnPath);
+                if (textResponse.ok) {
+                    const fullText = await textResponse.text();
+                    const parts = fullText.split('==================================================');
+                    const hymnText = (parts.length > 1 ? parts[1] : fullText).trim();
+                    container.innerHTML = hymnText;
+                } else {
+                    container.textContent = 'Translation not available.';
+                }
+            } catch (error) {
+                console.error('Error loading hymn text:', error);
+                container.textContent = 'Translation not available.';
+            }
+            container.dataset.loaded = 'true';
+        }
+
+        container.style.display = 'block';
+        button.textContent = 'Hide English Translation';
+    }
+
     async OnNodeClick(nodeId) {
         if (this.pendingRequests.has(nodeId)) return;
 
@@ -876,28 +925,7 @@ class HymnSimilarityMap
             summary = "Summary not available.";
         }
 
-        // Fetch hymn text for English translation
-        let hymnText = "Loading translation...";
-        try {
-            const bookNum = node.book_number;
-            const hymnPath = `/Data/rigveda_texts/book_${bookNum}/hymn_${nodeId}.txt`;
-            const textResponse = await fetch(hymnPath);
-            if (textResponse.ok) {
-                const fullText = await textResponse.text();
-                // Extract text after the separator line
-                const parts = fullText.split('==================================================');
-                if (parts.length > 1) {
-                    hymnText = parts[1].trim();
-                } else {
-                    hymnText = fullText.trim();
-                }
-            } else {
-                hymnText = "Translation not available.";
-            }
-        } catch (error) {
-            console.error('Error loading hymn text:', error);
-            hymnText = "Translation not available.";
-        }
+		// English translation will be loaded on demand via button
 
         // Build similar hymns HTML with new styling - more compact
         const similarHymnsHtml = neighbors.map((nb, idx) => `
@@ -905,6 +933,8 @@ class HymnSimilarityMap
                 <strong style="color: #5d3a1a; font-size: 14px;">${idx + 1}. ${nb.title}</strong>
                 <small style="color: #6d5638; font-weight: 600; display: block; margin-top: 2px;">
                     Book ${nb.book_number}.${nb.hymn_number} • ${(nb.similarity * 100).toFixed(1)}%
+                    &nbsp;·&nbsp;
+                    <a href="${this.GetHindiTranslationUrl(nb.book_number, nb.hymn_number)}" target="_blank" rel="noopener noreferrer" style="color: #5d3a1a; text-decoration: underline;">हिन्दी</a>
                 </small>
             </div>
         `).join('');
@@ -931,7 +961,7 @@ class HymnSimilarityMap
                             </p>
                         </div>
 
-                        <!-- Summary -->
+						<!-- Summary -->
                         <div class="summary-section" style="border-left-color: ${node.deity_color}; margin: 0 0 12px 0; padding: 12px;">
                             <h4 style="margin: 0 0 8px 0;">सारांश (Summary)</h4>
                             <p style="font-size: 13px; line-height: 1.6; margin: 0;">
@@ -939,21 +969,22 @@ class HymnSimilarityMap
                             </p>
                         </div>
 
-                        <!-- English Translation -->
-                        <div class="summary-section" style="border-left-color: ${node.deity_color}; margin: 0; padding: 12px;">
-                            <h4 style="margin: 0 0 8px 0;">English Translation</h4>
-                            <div style="font-size: 13px; line-height: 1.7; margin: 0; max-height: 300px; overflow-y: auto;">
-                                ${hymnText}
-                            </div>
-                        </div>
+						<!-- Original Hymn Text (Hindi/Sanskrit) -->
+						<div class="summary-section" style="border-left-color: ${node.deity_color}; margin: 0; padding: 12px;">
+							<h4 style="margin: 0 0 8px 0;">मूल सूक्त (Original Hymn Text)</h4>
+							<button onclick="window.hymnMap.OpenHindiOriginal(${node.book_number}, ${node.hymn_number})" style="width: auto; padding: 6px 12px;">
+								Open Original Hymn Text
+							</button>
+						</div>
 
-                        <!-- Hindi Translation Placeholder -->
-                        <div class="summary-section" style="border-left-color: ${node.deity_color}; margin: 12px 0 0 0; padding: 12px; opacity: 0.6;">
-                            <h4 style="margin: 0 0 8px 0;">हिन्दी अनुवाद (Hindi Translation)</h4>
-                            <p style="font-size: 13px; line-height: 1.6; margin: 0; font-style: italic;">
-                                Hindi translation coming soon...
-                            </p>
-                        </div>
+						<!-- English Translation (on demand) -->
+						<div class="summary-section" style="border-left-color: ${node.deity_color}; margin: 12px 0 0 0; padding: 12px;">
+							<h4 style="margin: 0 0 8px 0;">English Translation</h4>
+							<button id="english-btn-${nodeId}" onclick="window.hymnMap.ToggleEnglishTranslation(${node.book_number}, '${nodeId}')" style="width: auto; padding: 6px 12px; margin-bottom: 8px;">
+								Show English Translation
+							</button>
+							<div id="english-trans-${nodeId}" data-loaded="" style="display: none; font-size: 13px; line-height: 1.7; margin: 0; max-height: 300px; overflow-y: auto;"></div>
+						</div>
                     </div>
 
                     <div style="flex: 0 0 280px; min-width: 280px;">
