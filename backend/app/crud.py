@@ -67,12 +67,12 @@ def GetDiverseSimilarHymns(db: Session, hymnId: str, limit: int = 4) -> List[tup
 
     # Filter to get diverse deities
     result = []
-    usedDeities = {sourceDeityId}  # Don't include same deity as source
+    usedDeities = {}  # Don't include same deity as source
 
     for hymn in candidateHymns:
         if hymn.primary_deity_id not in usedDeities:
             result.append((hymn.hymn_id, similarityMap[hymn.hymn_id]))
-            usedDeities.add(hymn.primary_deity_id)
+            # usedDeities.add(hymn.primary_deity_id)
             if len(result) >= limit:
                 break
 
