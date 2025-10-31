@@ -880,14 +880,14 @@ class HymnSimilarityMap
     }
 
     ShowTooltip(event, node) {
+        const rawDeityNames = node.deity_names || "";
+        const cleanedDeityNames = rawDeityNames.replace(/[\[\]"]+/g, '');
+        const deityName = (cleanedDeityNames.split(',')[0] || '').trim() || "Unknown";
         this.tooltip
             .style("display", "block")
             .html(`
-                <strong>${node.title}</strong><br/>
-                Book ${node.book_number}, Hymn ${node.hymn_number}<br/>
-                Score: ${node.hymn_score.toFixed(1)}<br/>
-                Deities: ${node.deity_count}<br/>
-                <em>${node.deity_names}</em>
+                <strong>${deityName}</strong><br/>
+                Book ${node.book_number}, Hymn ${node.hymn_number}
             `)
             .style("left", (event.pageX + 10) + "px")
             .style("top", (event.pageY - 10) + "px");
@@ -951,9 +951,7 @@ class HymnSimilarityMap
                             <p style="margin: 5px 0; font-size: 14px;">
                                 <strong>Book:</strong> ${node.book_number} &nbsp;|&nbsp; <strong>Hymn Number:</strong> ${node.hymn_number}
                             </p>
-                            <p style="margin: 5px 0; font-size: 14px;">
-                                <strong>Assigned Deity:</strong> <span style="color: ${node.deity_color}; font-weight: 700;">${node.deity_names || "Unknown"}</span>
-                            </p>
+                            
                             <p style="margin: 5px 0; font-size: 14px;">
                                 <strong>Title:</strong> ${node.title}
                             </p>
