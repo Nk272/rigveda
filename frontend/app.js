@@ -76,8 +76,8 @@ class HymnSimilarityMap
                 .strength(0.95)
                 .iterations(5)
             )
-            // Constrain to circular boundary - moderate force to allow interior filling
-            .force("radial", d3.forceRadial(maxRadius, this.width / 2, this.height / 2).strength(0.05))
+            // Keep nodes inside the circle without pulling them to the rim
+            .force("boundary", this.CreateCircularBoundaryForce(maxRadius))
             .alphaDecay(0.018)
             .velocityDecay(0.65);
     }
@@ -314,22 +314,45 @@ class HymnSimilarityMap
         return centroids;
     }
 
-    PositionNodesByDeity(nodes) {
-        console.log(`Positioning ${nodes.length} nodes by deity clusters in filled circle`);
+    CreateCircularBoundaryForce(maxRadius) {
+        const stiffness = 0.4;
+        return (alpha) => {
+            const cx = this.width / 2;
+            const cy = this.height / 2;
+            const nodes = this.simulation.nodes();
+            for (let i = 0; i < nodes.length; i++) {
+                const n = nodes[i];
+                const dx = n.x - cx;
+                const dy = n.y - cy;
+                const dist = Math.hypot(dx, dy) || 1;
+                const allowed = maxRadius - (this.GetNodeRadius(n) + 1);
+                if (dist > allowed) {
+                    const s = allowed / dist;
+                    const tx = cx + dx * s;
+                    const ty = cy + dy * s;
+                    n.vx += (tx - n.x) * stiffness * alpha;
+                    n.vy += (ty - n.y) * stiffness * alpha;
+                }
+            }
+        };
+    }
 
-        const centerX = this.width / 2;
-        const centerY = this.height / 2;
+    PositionNodesByDeity(nodes) {
+        console.log(`Positioning ${nodes.length} nodes uniformly in circle with sector clustering`);
+
+        const cx = this.width / 2;
+        const cy = this.height / 2;
+        const maxRadius = Math.min(this.width, this.height) * 0.43;
+        const margin = 8; // keep nodes away from the edge slightly
 
         // Group nodes by deity
         const deityGroups = {};
         nodes.forEach(node => {
-            if (!deityGroups[node.primary_deity_id]) {
-                deityGroups[node.primary_deity_id] = [];
-            }
+            if (!deityGroups[node.primary_deity_id]) deityGroups[node.primary_deity_id] = [];
             deityGroups[node.primary_deity_id].push(node);
         });
 
-        // Sort deities by hymn count (descending)
+        // Sort deities by size, then separate similar colors
         const deityIds = Object.keys(deityGroups).map(Number);
         const deityCounts = deityIds.map(id => ({
             id,
@@ -337,49 +360,35 @@ class HymnSimilarityMap
             color: deityGroups[id][0].deity_color
         })).sort((a, b) => b.count - a.count);
 
-        // Separate deities to ensure same colors aren't adjacent
         const arrangedDeities = this.ArrangeDeitiesWithColorSeparation(deityCounts);
 
-        const totalDeities = arrangedDeities.length;
-        const maxRadius = Math.min(this.width, this.height) * 0.43;
+        // Assign angular sectors proportional to group sizes
+        const totalNodes = nodes.length;
+        const gap = Math.min(0.08, 2 * Math.PI * 0.01); // small gap between sectors
+        let angleCursor = -Math.PI / 2; // start at top
 
-        // Calculate deity cluster positions around the circle
-        const deityPositions = arrangedDeities.map((deity, index) => {
-            const angle = (index / totalDeities) * 2 * Math.PI - Math.PI / 2;
-            const clusterRadius = maxRadius * 0.6; // Position clusters at 60% radius
-
-            return {
-                deityId: deity.id,
-                centerX: centerX + Math.cos(angle) * clusterRadius,
-                centerY: centerY + Math.sin(angle) * clusterRadius,
-                count: deity.count
-            };
+        const sectors = arrangedDeities.map(d => {
+            const span = Math.max(0.3, (d.count / totalNodes) * (2 * Math.PI - arrangedDeities.length * gap));
+            const start = angleCursor;
+            const end = start + span;
+            angleCursor = end + gap;
+            return { deityId: d.id, start, end };
         });
 
-        // Position nodes within their deity clusters, distributed to fill the circle
-        deityPositions.forEach((deityPos) => {
-            const clusterNodes = deityGroups[deityPos.deityId];
-            const clusterSpread = maxRadius * 0.4; // How far nodes can spread from cluster center
-
-            clusterNodes.forEach((node, i) => {
-                // Use random uniform distribution within cluster
-                // For uniform distribution in a disk: r = sqrt(random()) * radius
-                const angle = Math.random() * 2 * Math.PI;
-                const r = Math.sqrt(Math.random()) * clusterSpread;
-
-                node.x = deityPos.centerX + Math.cos(angle) * r;
-                node.y = deityPos.centerY + Math.sin(angle) * r;
-
-                // Add slight random offset to prevent perfect alignment
-                node.x += (Math.random() - 0.5) * 10;
-                node.y += (Math.random() - 0.5) * 10;
-
-                node.vx = 0;
-                node.vy = 0;
-            });
+        // Place nodes uniformly inside their sector (blue-noise like start)
+        sectors.forEach(sec => {
+            const group = deityGroups[sec.deityId];
+            for (let i = 0; i < group.length; i++) {
+                const node = group[i];
+                const angle = sec.start + Math.random() * (sec.end - sec.start);
+                const r = (Math.sqrt(Math.random()) * (maxRadius - margin));
+                node.x = cx + Math.cos(angle) * r;
+                node.y = cy + Math.sin(angle) * r;
+                node.vx = 0; node.vy = 0;
+            }
         });
 
-        console.log(`Placed ${nodes.length} nodes in filled circular pattern with deity clustering`);
+        console.log(`Placed ${nodes.length} nodes with sector-based uniform distribution`);
     }
 
     ArrangeDeitiesWithColorSeparation(deityCounts) {
