@@ -1,6 +1,6 @@
 class HymnSimilarityMap 
 {
-    constructor() 
+    constructor()
     {
         console.log('Initializing HymnSimilarityMap...');
         this.width = window.innerWidth;
@@ -14,7 +14,13 @@ class HymnSimilarityMap
         this.focusNeighborIds = new Set();
         this.isFocusMode = false;
         this.showLinks = false; // hide edges
-        
+
+        // Load deity count from localStorage or default to 4
+        const savedDeityCount = localStorage.getItem('rigveda_deity_count');
+        this.currentDeityCount = savedDeityCount ? parseInt(savedDeityCount) : 4;
+
+        this.hymnTexts = {}; // Cache for hymn texts
+
         this.InitializeSvg();
         this.InitializeSimulation();
         this.InitializeTooltip();
@@ -98,6 +104,36 @@ class HymnSimilarityMap
         d3.select("#resetBtn").on("click", () => this.ResetView());
         d3.select("#centerBtn").on("click", () => this.CenterGraph());
 
+        // Hard reload button
+        d3.select("#hardReloadBtn").on("click", () => {
+            // Clear localStorage and reload
+            localStorage.removeItem('rigveda_deity_count');
+            location.reload(true);
+        });
+
+        // Handle deity count slider
+        const slider = d3.select("#deityCountSlider");
+        const valueDisplay = d3.select("#deityCountValue");
+
+        // Set initial value from loaded deity count
+        slider.property("value", this.currentDeityCount);
+        valueDisplay.text(this.currentDeityCount);
+
+        slider.on("input", (event) => {
+            const value = parseInt(event.target.value);
+            valueDisplay.text(value);
+        });
+
+        slider.on("change", (event) => {
+            const value = parseInt(event.target.value);
+
+            // Save to localStorage
+            localStorage.setItem('rigveda_deity_count', value);
+
+            // Reload the page to apply changes
+            location.reload();
+        });
+
         // Handle backdrop click to close info panel
         d3.select("#backdrop").on("click", () => this.CloseInfoPanel());
 
@@ -170,23 +206,30 @@ class HymnSimilarityMap
 
     async LoadInitialData() {
         try {
-            console.log('Loading initial data...');
-            d3.select("#loading").text("Loading all 1,028 hymns...");
-            
-            // Load all nodes for initial graph and search functionality
-            const response = await fetch('/api/graph/initial');
+            console.log(`Loading data for top ${this.currentDeityCount} deities...`);
+            d3.select("#loading").text(`Loading hymns for top ${this.currentDeityCount} deities...`);
+
+            // Clear existing nodes
+            this.nodes.clear();
+            this.links.clear();
+
+            // Load nodes filtered by deity count
+            const response = await fetch(`/api/graph/by-deities?n=${this.currentDeityCount}`);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const data = await response.json();
-            console.log(`Loaded ${data.nodes.length} nodes`);
-            
+            console.log(`Loaded ${data.nodes.length} nodes for ${this.currentDeityCount} deities`);
+
             this.allNodes = data.nodes;
-            
-            // Position nodes with larger scores in center
-            this.PositionNodesByScore(data.nodes);
-            
+
+            // Update completion tracker
+            this.UpdateCompletionTracker(data.nodes.length);
+
+            // Position nodes by deity clustering
+            this.PositionNodesByDeity(data.nodes);
+
             // Add all nodes to the map
             data.nodes.forEach(node => {
                 this.nodes.set(node.id, node);
@@ -200,6 +243,15 @@ class HymnSimilarityMap
             console.error('Error loading initial data:', error);
             d3.select("#loading").text(`Error: ${error.message}`);
         }
+    }
+
+    UpdateCompletionTracker(displayedCount) {
+        const totalHymns = 1028;
+        const percentage = (displayedCount / totalHymns) * 100;
+
+        d3.select("#hymnCount").text(displayedCount);
+        d3.select("#hymnPercent").text(percentage.toFixed(1));
+        d3.select("#progressFill").style("width", `${percentage}%`);
     }
 
     CreateClusterForce() {
@@ -263,6 +315,131 @@ class HymnSimilarityMap
         return centroids;
     }
 
+    PositionNodesByDeity(nodes) {
+        console.log(`Positioning ${nodes.length} nodes by deity clusters in circular pattern`);
+
+        const centerX = this.width / 2;
+        const centerY = this.height / 2;
+
+        // Group nodes by deity
+        const deityGroups = {};
+        nodes.forEach(node => {
+            if (!deityGroups[node.primary_deity_id]) {
+                deityGroups[node.primary_deity_id] = [];
+            }
+            deityGroups[node.primary_deity_id].push(node);
+        });
+
+        // Sort deities by hymn count (descending)
+        const deityIds = Object.keys(deityGroups).map(Number);
+        const deityCounts = deityIds.map(id => ({
+            id,
+            count: deityGroups[id].length,
+            color: deityGroups[id][0].deity_color
+        })).sort((a, b) => b.count - a.count);
+
+        // Separate deities to ensure same colors aren't adjacent
+        const arrangedDeities = this.ArrangeDeitiesWithColorSeparation(deityCounts);
+
+        const totalDeities = arrangedDeities.length;
+        const maxRadius = Math.min(this.width, this.height) * 0.38;
+
+        // Calculate cluster positions - all at similar radii to maintain circular boundary
+        arrangedDeities.forEach((deity, index) => {
+            const angle = (index / totalDeities) * 2 * Math.PI - Math.PI / 2; // Start from top
+
+            // All cluster centers at similar distance from center (60-80% of maxRadius)
+            // Major deities slightly closer, but not too much variation
+            const radiusFactor = 0.5 + (deity.count / nodes.length) * 0.2; // 50-70% range
+            const clusterCenterRadius = maxRadius * radiusFactor;
+
+            const clusterX = centerX + Math.cos(angle) * clusterCenterRadius;
+            const clusterY = centerY + Math.sin(angle) * clusterCenterRadius;
+
+            // Position nodes within this deity's cluster
+            const clusterNodes = deityGroups[deity.id];
+
+            // Cluster size based on number of nodes, but limited to maintain circular boundary
+            const clusterRadius = Math.min(maxRadius * 0.25, Math.sqrt(clusterNodes.length) * 10);
+
+            clusterNodes.forEach((node, i) => {
+                if (clusterNodes.length === 1) {
+                    // Single node at cluster center
+                    node.x = clusterX;
+                    node.y = clusterY;
+                } else {
+                    // Arrange nodes in concentric rings within cluster
+                    const ringIndex = Math.floor(Math.sqrt(i));
+                    const nodesInRing = Math.ceil(Math.sqrt(clusterNodes.length)) * 2;
+                    const nodeIndexInRing = i % nodesInRing;
+
+                    const clusterAngle = (nodeIndexInRing / nodesInRing) * 2 * Math.PI;
+                    const clusterDist = clusterRadius * (ringIndex / Math.ceil(Math.sqrt(clusterNodes.length)));
+
+                    node.x = clusterX + Math.cos(clusterAngle) * clusterDist;
+                    node.y = clusterY + Math.sin(clusterAngle) * clusterDist;
+                }
+
+                node.vx = 0;
+                node.vy = 0;
+            });
+        });
+
+        console.log(`Placed ${nodes.length} nodes in ${totalDeities} deity clusters (circular boundary)`);
+    }
+
+    ArrangeDeitiesWithColorSeparation(deityCounts) {
+        // Use a greedy approach to separate similar colors
+        if (deityCounts.length <= 1) return deityCounts;
+
+        const arranged = [deityCounts[0]];
+        const remaining = deityCounts.slice(1);
+
+        while (remaining.length > 0) {
+            const lastColor = arranged[arranged.length - 1].color;
+
+            // Find the deity with most different color from the last one
+            let maxDiff = -1;
+            let maxDiffIndex = 0;
+
+            remaining.forEach((deity, index) => {
+                const diff = this.ColorDifference(lastColor, deity.color);
+                if (diff > maxDiff) {
+                    maxDiff = diff;
+                    maxDiffIndex = index;
+                }
+            });
+
+            arranged.push(remaining[maxDiffIndex]);
+            remaining.splice(maxDiffIndex, 1);
+        }
+
+        return arranged;
+    }
+
+    ColorDifference(color1, color2) {
+        // Simple RGB distance calculation
+        const rgb1 = this.HexToRgb(color1);
+        const rgb2 = this.HexToRgb(color2);
+
+        if (!rgb1 || !rgb2) return 0;
+
+        return Math.sqrt(
+            Math.pow(rgb1.r - rgb2.r, 2) +
+            Math.pow(rgb1.g - rgb2.g, 2) +
+            Math.pow(rgb1.b - rgb2.b, 2)
+        );
+    }
+
+    HexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
+    }
+
     PositionNodesByScore(nodes) {
         console.log(`Positioning ${nodes.length} nodes in circular pattern`);
 
@@ -323,22 +500,24 @@ class HymnSimilarityMap
     GetNodeRadius(node) {
         const minRadius = 4;
         const maxRadius = 20;
-        
+
+        // Use word_count for node size
         // Fallback if allNodes is not loaded yet
         if (!this.allNodes || this.allNodes.length === 0) {
-            return minRadius + ((node.hymn_score || 0) / 1000) * (maxRadius - minRadius);
+            const wordCount = node.word_count || 100;
+            return minRadius + Math.min((wordCount / 500) * (maxRadius - minRadius), maxRadius - minRadius);
         }
-        
-        // Use actual max score from data for better scaling
-        const maxScore = Math.max(...this.allNodes.map(n => n.hymn_score));
-        const minScore = Math.min(...this.allNodes.map(n => n.hymn_score));
-        
-        // Scale radius based on hymn score
-        const scoreRange = maxScore - minScore;
-        if (scoreRange === 0) return minRadius;
-        
-        const normalizedScore = (node.hymn_score - minScore) / scoreRange;
-        return minRadius + (normalizedScore * (maxRadius - minRadius));
+
+        // Use actual max/min word count from data for better scaling
+        const maxWordCount = Math.max(...this.allNodes.map(n => n.word_count || 0));
+        const minWordCount = Math.min(...this.allNodes.map(n => n.word_count || 0));
+
+        // Scale radius based on word count
+        const wordCountRange = maxWordCount - minWordCount;
+        if (wordCountRange === 0) return minRadius;
+
+        const normalizedWordCount = ((node.word_count || 0) - minWordCount) / wordCountRange;
+        return minRadius + (normalizedWordCount * (maxRadius - minRadius));
     }
 
     GetNodeColor(node) {
@@ -718,6 +897,29 @@ class HymnSimilarityMap
             summary = "Summary not available.";
         }
 
+        // Fetch hymn text for English translation
+        let hymnText = "Loading translation...";
+        try {
+            const bookNum = node.book_number;
+            const hymnPath = `/Data/rigveda_texts/book_${bookNum}/hymn_${nodeId}.txt`;
+            const textResponse = await fetch(hymnPath);
+            if (textResponse.ok) {
+                const fullText = await textResponse.text();
+                // Extract text after the separator line
+                const parts = fullText.split('==================================================');
+                if (parts.length > 1) {
+                    hymnText = parts[1].trim();
+                } else {
+                    hymnText = fullText.trim();
+                }
+            } else {
+                hymnText = "Translation not available.";
+            }
+        } catch (error) {
+            console.error('Error loading hymn text:', error);
+            hymnText = "Translation not available.";
+        }
+
         // Build similar hymns HTML with new styling - more compact
         const similarHymnsHtml = neighbors.map((nb, idx) => `
             <div class="similar-hymn" onclick="window.hymnMap.OnNodeClick('${nb.id}')" style="border-left-color: ${nb.deity_color}; padding: 8px 12px; margin: 6px 0;">
@@ -736,19 +938,41 @@ class HymnSimilarityMap
 
                 <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                     <div style="flex: 1; min-width: 300px;">
-                        <div style="padding: 10px; background: rgba(139, 111, 71, 0.08); border-radius: 6px; border: 2px solid rgba(139, 111, 71, 0.2); margin-bottom: 12px;">
+                        <!-- General Hymn Info -->
+                        <div style="padding: 12px; background: rgba(139, 111, 71, 0.08); border-radius: 6px; border: 2px solid rgba(139, 111, 71, 0.2); margin-bottom: 12px;">
+                            <h4 style="margin: 0 0 8px 0; color: #5d3a1a; font-size: 16px;">Hymn Information</h4>
                             <p style="margin: 5px 0; font-size: 14px;">
-                                <strong>Book:</strong> ${node.book_number} &nbsp;|&nbsp; <strong>Hymn:</strong> ${node.hymn_number} &nbsp;|&nbsp; <strong>Score:</strong> ${node.hymn_score.toFixed(1)}
+                                <strong>Book:</strong> ${node.book_number} &nbsp;|&nbsp; <strong>Hymn Number:</strong> ${node.hymn_number}
                             </p>
                             <p style="margin: 5px 0; font-size: 14px;">
-                                <strong>Deities:</strong> ${node.deity_names || "Unknown"}
+                                <strong>Assigned Deity:</strong> <span style="color: ${node.deity_color}; font-weight: 700;">${node.deity_names || "Unknown"}</span>
+                            </p>
+                            <p style="margin: 5px 0; font-size: 14px;">
+                                <strong>Title:</strong> ${node.title}
                             </p>
                         </div>
 
-                        <div class="summary-section" style="border-left-color: ${node.deity_color}; margin: 0; padding: 12px;">
+                        <!-- Summary -->
+                        <div class="summary-section" style="border-left-color: ${node.deity_color}; margin: 0 0 12px 0; padding: 12px;">
                             <h4 style="margin: 0 0 8px 0;">सारांश (Summary)</h4>
                             <p style="font-size: 13px; line-height: 1.6; margin: 0;">
                                 ${summary}
+                            </p>
+                        </div>
+
+                        <!-- English Translation -->
+                        <div class="summary-section" style="border-left-color: ${node.deity_color}; margin: 0; padding: 12px;">
+                            <h4 style="margin: 0 0 8px 0;">English Translation</h4>
+                            <div style="font-size: 13px; line-height: 1.7; margin: 0; max-height: 300px; overflow-y: auto;">
+                                ${hymnText}
+                            </div>
+                        </div>
+
+                        <!-- Hindi Translation Placeholder -->
+                        <div class="summary-section" style="border-left-color: ${node.deity_color}; margin: 12px 0 0 0; padding: 12px; opacity: 0.6;">
+                            <h4 style="margin: 0 0 8px 0;">हिन्दी अनुवाद (Hindi Translation)</h4>
+                            <p style="font-size: 13px; line-height: 1.6; margin: 0; font-style: italic;">
+                                Hindi translation coming soon...
                             </p>
                         </div>
                     </div>

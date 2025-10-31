@@ -11,6 +11,7 @@ class HymnNode(BaseModel):
     hymn_score: float
     primary_deity_id: int = None
     deity_color: str = "#95A5A6"
+    word_count: int = 0
 
 class HymnNeighbor(BaseModel):
     id: str
@@ -24,6 +25,7 @@ class HymnNeighbor(BaseModel):
     primary_deity_id: int = None
     deity_color: str = "#95A5A6"
     summary: str = ""
+    word_count: int = 0
 
 class NodeResponse(BaseModel):
     node: HymnNode

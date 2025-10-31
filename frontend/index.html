@@ -117,6 +117,79 @@
             font-style: italic;
         }
 
+        #deityCountControl {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #8b6f47;
+        }
+
+        #deityCountControl label {
+            display: block;
+            font-weight: 600;
+            color: #5d3a1a;
+            margin-bottom: 8px;
+        }
+
+        #deityCountSlider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(139, 111, 71, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        #deityCountSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #8b6f47;
+            cursor: pointer;
+            border: 2px solid #5d3a1a;
+        }
+
+        #deityCountSlider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #8b6f47;
+            cursor: pointer;
+            border: 2px solid #5d3a1a;
+        }
+
+        #deityCountValue {
+            display: inline-block;
+            font-weight: 700;
+            color: #8b4513;
+            font-size: 18px;
+        }
+
+        #completionTracker {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(139, 111, 71, 0.2);
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        #completionTracker .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(139, 111, 71, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        #completionTracker .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8b6f47 0%, #5d3a1a 100%);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
         /* Vertical Scroll Info Panel */
         #info {
             position: fixed;
@@ -370,6 +443,21 @@
             <h2>ऋग्वेद</h2>
             <button id="resetBtn">Reset View</button>
             <button id="centerBtn">Center Graph</button>
+            <button id="hardReloadBtn">Hard Reload</button>
+
+            <div id="deityCountControl">
+                <label for="deityCountSlider">
+                    Number of Deities: <span id="deityCountValue">4</span>
+                </label>
+                <input type="range" id="deityCountSlider" min="4" max="20" value="4" step="1">
+            </div>
+
+            <div id="completionTracker">
+                <div><strong>Hymns Displayed:</strong> <span id="hymnCount">0</span> / 1028 (<span id="hymnPercent">0</span>%)</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+            </div>
 
             <div style="margin-top: 15px;">
                 <input type="text" id="searchInput" placeholder="Search hymns...">
@@ -377,7 +465,7 @@
             </div>
 
             <div style="margin-top: 10px;">
-                <small>All 1,028 hymns loaded • Click nodes to explore</small>
+                <small>Click nodes to explore • Adjust deities (reloads page)</small>
             </div>
         </div>
 

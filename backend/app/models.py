@@ -5,7 +5,7 @@ Base = declarative_base()
 
 class HymnVector(Base):
     __tablename__ = "hymn_vectors"
-    
+
     hymn_id = Column(String, primary_key=True)
     book_number = Column(Integer)
     hymn_number = Column(Integer)
@@ -15,6 +15,7 @@ class HymnVector(Base):
     deity_count = Column(Integer)
     hymn_score = Column(Float)
     primary_deity_id = Column(Integer)
+    word_count = Column(Integer)  # Uncomment after running Data/count_hymn_words.py
 
 class HymnSimilarity(Base):
     __tablename__ = "hymn_similarities_cosine"

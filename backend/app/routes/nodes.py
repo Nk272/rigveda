@@ -30,7 +30,8 @@ def GetAllNodes(db: Session = Depends(GetDatabase)):
             deity_count=hymn.deity_count or 0,
             hymn_score=hymn.hymn_score or 0.0,
             primary_deity_id=hymn.primary_deity_id,
-            deity_color=deity_colors.get(hymn.primary_deity_id, "#95A5A6")
+            deity_color=deity_colors.get(hymn.primary_deity_id, "#95A5A6"),
+            word_count=getattr(hymn, 'word_count', None) or 0
         )
         for hymn in hymns
     ]
@@ -52,11 +53,44 @@ def GetInitialGraph(db: Session = Depends(GetDatabase)):
             deity_count=hymn.deity_count or 0,
             hymn_score=hymn.hymn_score or 0.0,
             primary_deity_id=hymn.primary_deity_id,
-            deity_color=deity_colors.get(hymn.primary_deity_id, "#95A5A6")
+            deity_color=deity_colors.get(hymn.primary_deity_id, "#95A5A6"),
+            word_count=getattr(hymn, 'word_count', None) or 0
         )
         for hymn in hymns
     ]
     return schemas.GraphResponse(nodes=nodes)
+
+@router.get("/graph/by-deities", response_model=schemas.GraphResponse)
+def GetGraphByTopDeities(n: int = 20, db: Session = Depends(GetDatabase)):
+    """Get hymns filtered by top N deities"""
+    # Get top N deities
+    topDeityIds = crud.GetTopNDeities(db, n)
+
+    # Get hymns for these deities
+    hymns = crud.GetHymnsByDeities(db, topDeityIds)
+    deity_colors = crud.GetDeityColors(db)
+
+    nodes = [
+        schemas.HymnNode(
+            id=hymn.hymn_id,
+            title=hymn.title,
+            book_number=hymn.book_number,
+            hymn_number=hymn.hymn_number,
+            deity_names=hymn.deity_names or "",
+            deity_count=hymn.deity_count or 0,
+            hymn_score=hymn.hymn_score or 0.0,
+            primary_deity_id=hymn.primary_deity_id,
+            deity_color=deity_colors.get(hymn.primary_deity_id, "#95A5A6"),
+            word_count=getattr(hymn, 'word_count', None) or 0
+        )
+        for hymn in hymns
+    ]
+    return schemas.GraphResponse(nodes=nodes)
+
+@router.get("/deities/stats")
+def GetDeityStatistics(db: Session = Depends(GetDatabase)):
+    """Get statistics about deities"""
+    return crud.GetDeityStats(db)
 
 @router.get("/node/{hymnId}", response_model=schemas.NodeResponse)
 def GetNodeWithNeighbors(hymnId: str, limit: int = 4, db: Session = Depends(GetDatabase)):
@@ -89,7 +123,8 @@ def GetNodeWithNeighbors(hymnId: str, limit: int = 4, db: Session = Depends(GetD
         deity_count=hymn.deity_count or 0,
         hymn_score=hymn.hymn_score or 0.0,
         primary_deity_id=hymn.primary_deity_id,
-        deity_color=deity_colors.get(hymn.primary_deity_id, "#95A5A6")
+        deity_color=deity_colors.get(hymn.primary_deity_id, "#95A5A6"),
+        word_count=getattr(hymn, 'word_count', None) or 0
     )
     
     neighbors = [
@@ -104,7 +139,8 @@ def GetNodeWithNeighbors(hymnId: str, limit: int = 4, db: Session = Depends(GetD
             similarity=similarityLookup[neighbor.hymn_id],
             primary_deity_id=neighbor.primary_deity_id,
             deity_color=deity_colors.get(neighbor.primary_deity_id, "#95A5A6"),
-            summary=SUMMARIES.get(neighbor.hymn_id, "")
+            summary=SUMMARIES.get(neighbor.hymn_id, ""),
+            word_count=getattr(neighbor, 'word_count', None) or 0
         )
         for neighbor in neighborHymns
     ]

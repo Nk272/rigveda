@@ -93,3 +93,44 @@ def GetDeityColors(db: Session) -> Dict[int, str]:
     """Get mapping of deity_id to color"""
     deities = db.query(models.DeityIndex.deity_id, models.DeityIndex.deity_color).all()
     return {deity_id: color for deity_id, color in deities if color}
+
+def GetTopNDeities(db: Session, n: int = 20) -> List[int]:
+    """Get top N deities by number of hymns assigned (primary_deity_id)"""
+    from sqlalchemy import func
+
+    # Get deities ordered by count of hymns where they are the primary deity
+    result = db.query(
+        models.HymnVector.primary_deity_id,
+        func.count(models.HymnVector.hymn_id).label('hymn_count')
+    ).filter(
+        models.HymnVector.primary_deity_id.isnot(None)
+    ).group_by(
+        models.HymnVector.primary_deity_id
+    ).order_by(
+        desc('hymn_count')
+    ).limit(n).all()
+
+    return [deity_id for deity_id, count in result]
+
+def GetHymnsByDeities(db: Session, deityIds: List[int]) -> List[models.HymnVector]:
+    """Get all hymns that belong to the specified deities"""
+    return db.query(models.HymnVector).filter(models.HymnVector.primary_deity_id.in_(deityIds)).order_by(models.HymnVector.book_number, models.HymnVector.hymn_number).all()
+
+def GetDeityStats(db: Session) -> List[Dict]:
+    """Get statistics for all deities including hymn count"""
+    deities = db.query(
+        models.DeityIndex.deity_id,
+        models.DeityIndex.deity_name,
+        models.DeityIndex.deity_color,
+        models.DeityIndex.deity_frequency
+    ).order_by(desc(models.DeityIndex.deity_frequency)).all()
+
+    return [
+        {
+            "deity_id": d.deity_id,
+            "deity_name": d.deity_name,
+            "deity_color": d.deity_color,
+            "hymn_count": d.deity_frequency
+        }
+        for d in deities if d.deity_color  # Only include deities with colors
+    ]
