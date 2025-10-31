@@ -133,3 +133,18 @@ def GetDeityStats(db: Session) -> List[Dict]:
         }
         for d in deities if d.deity_color  # Only include deities with colors
     ]
+
+def GetHymnLightByDeities(db: Session, deityIds: List[int]):
+    rows = db.query(
+        models.HymnVector.hymn_id,
+        models.HymnVector.title,
+        models.HymnVector.book_number,
+        models.HymnVector.hymn_number,
+        models.HymnVector.primary_deity_id,
+        models.HymnVector.word_count,
+    ).filter(
+        models.HymnVector.primary_deity_id.in_(deityIds)
+    ).order_by(
+        models.HymnVector.book_number, models.HymnVector.hymn_number
+    ).all()
+    return rows

@@ -21,6 +21,7 @@ class HymnSimilarityMap
 
 		this.hymnTexts = {}; // Cache for hymn texts
 		this.deityIdToName = {}; // deity_id -> deity_name
+        this.summaries = null; // cache summaries JSON
 
         this.InitializeSvg();
         this.InitializeSimulation();
@@ -222,7 +223,7 @@ class HymnSimilarityMap
 			await this.LoadDeityNames();
 
             // Load nodes filtered by deity count
-            const response = await fetch(`/api/graph/by-deities?n=${this.currentDeityCount}`);
+            const response = await fetch(`/api/graph/light-by-deities?n=${this.currentDeityCount}`);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
@@ -752,7 +753,7 @@ class HymnSimilarityMap
 
         // Run simulation in background without updating DOM
         const targetAlpha = 0.001; // Threshold for stable simulation
-        const maxIterations = 300; // Safety limit
+        const maxIterations = 180; // Safety limit
         let iterations = 0;
 
         this.simulation.on("tick", null); // Temporarily disable tick updates
@@ -942,12 +943,14 @@ class HymnSimilarityMap
         infoPanel.style("display", "block");
         backdrop.style("display", "block");
 
-        // Fetch summary for the main hymn
+        // Fetch summary once and cache
         let summary = "Loading summary...";
         try {
-            const summaryResponse = await fetch('/Data/JSONMaps/rigveda_summaries.json');
-            const summaries = await summaryResponse.json();
-            summary = summaries[nodeId] || "Summary not available.";
+            if (!this.summaries) {
+                const summaryResponse = await fetch('/Data/JSONMaps/rigveda_summaries.json');
+                this.summaries = await summaryResponse.json();
+            }
+            summary = this.summaries[nodeId] || "Summary not available.";
         } catch (error) {
             console.error('Error loading summary:', error);
             summary = "Summary not available.";

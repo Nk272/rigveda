@@ -2,10 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import ORJSONResponse
 from .routes import nodes
 from .db import EnsureIndexes
 
-app = FastAPI(title="Rigveda Hymn Similarity API", version="1.0.0")
+app = FastAPI(title="Rigveda Hymn Similarity API", version="1.0.0", default_response_class=ORJSONResponse)
 # Compression
 app.add_middleware(GZipMiddleware, minimum_size=500)
 

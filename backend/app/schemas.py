@@ -13,6 +13,15 @@ class HymnNode(BaseModel):
     deity_color: str = "#95A5A6"
     word_count: int = 0
 
+class HymnLightNode(BaseModel):
+    id: str
+    title: str
+    book_number: int
+    hymn_number: int
+    primary_deity_id: int = None
+    deity_color: str = "#95A5A6"
+    word_count: int = 0
+
 class HymnNeighbor(BaseModel):
     id: str
     title: str
@@ -33,3 +42,6 @@ class NodeResponse(BaseModel):
 
 class GraphResponse(BaseModel):
     nodes: List[HymnNode]
+
+class GraphLightResponse(BaseModel):
+    nodes: List[HymnLightNode]

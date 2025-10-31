@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from .. import crud, schemas
 from ..db import GetDatabase
@@ -86,6 +86,30 @@ def GetGraphByTopDeities(n: int = 20, db: Session = Depends(GetDatabase)):
         for hymn in hymns
     ]
     return schemas.GraphResponse(nodes=nodes)
+
+@router.get("/graph/light-by-deities", response_model=schemas.GraphLightResponse)
+def GetLightGraphByTopDeities(n: int = 20, response: Response = None, db: Session = Depends(GetDatabase)):
+    topDeityIds = crud.GetTopNDeities(db, n)
+    hymns = crud.GetHymnLightByDeities(db, topDeityIds)
+    deity_colors = crud.GetDeityColors(db)
+
+    nodes = [
+        schemas.HymnLightNode(
+            id=h[0],
+            title=h[1],
+            book_number=h[2],
+            hymn_number=h[3],
+            primary_deity_id=h[4],
+            deity_color=deity_colors.get(h[4], "#95A5A6"),
+            word_count=h[5] or 0
+        )
+        for h in hymns
+    ]
+
+    if response is not None:
+        response.headers["Cache-Control"] = "public, max-age=600"
+
+    return schemas.GraphLightResponse(nodes=nodes)
 
 @router.get("/deities/stats")
 def GetDeityStatistics(db: Session = Depends(GetDatabase)):
