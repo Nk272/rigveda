@@ -58,7 +58,7 @@ class HymnSimilarityMap
 
     InitializeSimulation() {
         console.log('Initializing simulation...');
-        const maxRadius = Math.min(this.width, this.height) * 0.42;
+        const maxRadius = Math.min(this.width, this.height) * 0.43;
 
         this.simulation = d3.forceSimulation()
             .force("link", d3.forceLink()
@@ -67,19 +67,19 @@ class HymnSimilarityMap
                 .strength(d => (d.similarity || 0) * 0.3)
             )
             .force("charge", d3.forceManyBody()
-                .strength(-0.5)
-                .distanceMax(30)
+                .strength(-2.0)
+                .distanceMax(60)
             )
-            .force("center", d3.forceCenter(this.width / 2, this.height / 2).strength(0.005))
+            .force("center", d3.forceCenter(this.width / 2, this.height / 2).strength(0.02))
             .force("collision", d3.forceCollide()
-                .radius(d => this.GetNodeRadius(d) + 3)
-                .strength(1.0)
-                .iterations(3)
+                .radius(d => this.GetNodeRadius(d) + 2.5)
+                .strength(0.95)
+                .iterations(5)
             )
-            // Constrain to circular boundary - keep nodes in circular pattern
-            .force("radial", d3.forceRadial(maxRadius, this.width / 2, this.height / 2).strength(0.02))
-            .alphaDecay(0.02)
-            .velocityDecay(0.8);
+            // Constrain to circular boundary - moderate force to allow interior filling
+            .force("radial", d3.forceRadial(maxRadius, this.width / 2, this.height / 2).strength(0.05))
+            .alphaDecay(0.018)
+            .velocityDecay(0.65);
     }
 
     InitializeTooltip() {
@@ -294,16 +294,15 @@ class HymnSimilarityMap
 
         const totalDeities = deityCounts.length;
 
-        // Calculate radius based on screen size
-        // Use variable radii - major deities closer to center, minor deities on edge
-        const maxRadius = Math.min(this.width, this.height) * 0.38;
+        // Calculate radius based on screen size - match the simulation maxRadius
+        const maxRadius = Math.min(this.width, this.height) * 0.43;
 
-        // Arrange deity clusters in a circular pattern with varying radii
+        // Arrange deity clusters uniformly in a circular pattern
         deityCounts.forEach((deity, index) => {
             const angle = (index / totalDeities) * 2 * Math.PI - Math.PI / 2; // Start from top
 
-            // Major deities (first few) get smaller radius, minor deities get larger radius
-            const radiusFactor = 0.3 + (index / totalDeities) * 0.7; // 30% to 100%
+            // Use uniform radius for all deities to maintain circular boundary
+            const radiusFactor = 0.6; // Single uniform factor for cluster centers
             const radius = maxRadius * radiusFactor;
 
             centroids[deity.id] = {
@@ -316,7 +315,7 @@ class HymnSimilarityMap
     }
 
     PositionNodesByDeity(nodes) {
-        console.log(`Positioning ${nodes.length} nodes by deity clusters in circular pattern`);
+        console.log(`Positioning ${nodes.length} nodes by deity clusters in filled circle`);
 
         const centerX = this.width / 2;
         const centerY = this.height / 2;
@@ -342,50 +341,45 @@ class HymnSimilarityMap
         const arrangedDeities = this.ArrangeDeitiesWithColorSeparation(deityCounts);
 
         const totalDeities = arrangedDeities.length;
-        const maxRadius = Math.min(this.width, this.height) * 0.38;
+        const maxRadius = Math.min(this.width, this.height) * 0.43;
 
-        // Calculate cluster positions - all at similar radii to maintain circular boundary
-        arrangedDeities.forEach((deity, index) => {
-            const angle = (index / totalDeities) * 2 * Math.PI - Math.PI / 2; // Start from top
+        // Calculate deity cluster positions around the circle
+        const deityPositions = arrangedDeities.map((deity, index) => {
+            const angle = (index / totalDeities) * 2 * Math.PI - Math.PI / 2;
+            const clusterRadius = maxRadius * 0.6; // Position clusters at 60% radius
 
-            // All cluster centers at similar distance from center (60-80% of maxRadius)
-            // Major deities slightly closer, but not too much variation
-            const radiusFactor = 0.5 + (deity.count / nodes.length) * 0.2; // 50-70% range
-            const clusterCenterRadius = maxRadius * radiusFactor;
+            return {
+                deityId: deity.id,
+                centerX: centerX + Math.cos(angle) * clusterRadius,
+                centerY: centerY + Math.sin(angle) * clusterRadius,
+                count: deity.count
+            };
+        });
 
-            const clusterX = centerX + Math.cos(angle) * clusterCenterRadius;
-            const clusterY = centerY + Math.sin(angle) * clusterCenterRadius;
-
-            // Position nodes within this deity's cluster
-            const clusterNodes = deityGroups[deity.id];
-
-            // Cluster size based on number of nodes, but limited to maintain circular boundary
-            const clusterRadius = Math.min(maxRadius * 0.25, Math.sqrt(clusterNodes.length) * 10);
+        // Position nodes within their deity clusters, distributed to fill the circle
+        deityPositions.forEach((deityPos) => {
+            const clusterNodes = deityGroups[deityPos.deityId];
+            const clusterSpread = maxRadius * 0.4; // How far nodes can spread from cluster center
 
             clusterNodes.forEach((node, i) => {
-                if (clusterNodes.length === 1) {
-                    // Single node at cluster center
-                    node.x = clusterX;
-                    node.y = clusterY;
-                } else {
-                    // Arrange nodes in concentric rings within cluster
-                    const ringIndex = Math.floor(Math.sqrt(i));
-                    const nodesInRing = Math.ceil(Math.sqrt(clusterNodes.length)) * 2;
-                    const nodeIndexInRing = i % nodesInRing;
+                // Use random uniform distribution within cluster
+                // For uniform distribution in a disk: r = sqrt(random()) * radius
+                const angle = Math.random() * 2 * Math.PI;
+                const r = Math.sqrt(Math.random()) * clusterSpread;
 
-                    const clusterAngle = (nodeIndexInRing / nodesInRing) * 2 * Math.PI;
-                    const clusterDist = clusterRadius * (ringIndex / Math.ceil(Math.sqrt(clusterNodes.length)));
+                node.x = deityPos.centerX + Math.cos(angle) * r;
+                node.y = deityPos.centerY + Math.sin(angle) * r;
 
-                    node.x = clusterX + Math.cos(clusterAngle) * clusterDist;
-                    node.y = clusterY + Math.sin(clusterAngle) * clusterDist;
-                }
+                // Add slight random offset to prevent perfect alignment
+                node.x += (Math.random() - 0.5) * 10;
+                node.y += (Math.random() - 0.5) * 10;
 
                 node.vx = 0;
                 node.vy = 0;
             });
         });
 
-        console.log(`Placed ${nodes.length} nodes in ${totalDeities} deity clusters (circular boundary)`);
+        console.log(`Placed ${nodes.length} nodes in filled circular pattern with deity clustering`);
     }
 
     ArrangeDeitiesWithColorSeparation(deityCounts) {
@@ -446,8 +440,8 @@ class HymnSimilarityMap
         const centerX = this.width / 2;
         const centerY = this.height / 2;
 
-        // Calculate base radius for the circle - use about 40% of the smaller dimension
-        const baseRadius = Math.min(this.width, this.height) * 0.35;
+        // Calculate base radius for the circle - match the simulation maxRadius
+        const baseRadius = Math.min(this.width, this.height) * 0.43;
 
         // Sort nodes by score to position high-scoring nodes closer to center
         const sortedNodes = [...nodes].sort((a, b) => b.hymn_score - a.hymn_score);
