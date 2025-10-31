@@ -419,7 +419,6 @@
     <div id="container">
         <div id="controls">
             <h2>ऋग्वेद</h2>
-            <button id="resetBtn">Reset View</button>
             <button id="centerBtn">Center Graph</button>
             <button id="hardReloadBtn">Hard Reload</button>
 
@@ -427,7 +426,14 @@
                 <label for="deityCountSlider">
                     Number of Deities: <span id="deityCountValue">4</span>
                 </label>
-                <input type="range" id="deityCountSlider" min="4" max="20" value="4" step="1">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="range" id="deityCountSlider" min="4" max="20" value="4" step="1" title="Choose between 4 and 20">
+                    <input type="number" id="deityCountInput" min="4" max="20" step="1" value="4" title="Enter a number between 4 and 20" style="width: 70px; padding: 6px; border: 2px solid #8b6f47; border-radius: 4px; background: #fff6e6; color: #3d2817;">
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6d5638; margin-top: 4px;">
+                    <span title="Minimum allowed value">4 (min)</span>
+                    <span title="Maximum allowed value">20 (max)</span>
+                </div>
             </div>
 
             <div id="completionTracker">
@@ -436,12 +442,6 @@
                     <div class="progress-fill" id="progressFill" style="width: 0%"></div>
                 </div>
             </div>
-
-            <div style="margin-top: 15px;">
-                <input type="text" id="searchInput" placeholder="Search hymns...">
-                <div id="searchResults"></div>
-            </div>
-
             <div style="margin-top: 10px;">
                 <small>Click nodes to explore • Adjust deities (reloads page)</small>
             </div>

@@ -25,7 +25,6 @@ class HymnSimilarityMap
         this.InitializeSimulation();
         this.InitializeTooltip();
         this.InitializeControls();
-        this.InitializeSearch();
         this.LoadInitialData();
     }
 
@@ -101,7 +100,6 @@ class HymnSimilarityMap
     }
 
     InitializeControls() {
-        d3.select("#resetBtn").on("click", () => this.ResetView());
         d3.select("#centerBtn").on("click", () => this.CenterGraph());
 
         // Hard reload button
@@ -113,19 +111,29 @@ class HymnSimilarityMap
 
         // Handle deity count slider
         const slider = d3.select("#deityCountSlider");
+        const input = d3.select("#deityCountInput");
         const valueDisplay = d3.select("#deityCountValue");
 
         // Set initial value from loaded deity count
         slider.property("value", this.currentDeityCount);
+        if (!input.empty()) input.property("value", this.currentDeityCount);
         valueDisplay.text(this.currentDeityCount);
 
+        const minVal = parseInt(slider.attr("min"));
+        const maxVal = parseInt(slider.attr("max"));
+
         slider.on("input", (event) => {
-            const value = parseInt(event.target.value);
+            let value = parseInt(event.target.value, 10);
+            if (!Number.isFinite(value)) value = this.currentDeityCount;
+            value = Math.max(minVal, Math.min(maxVal, value));
             valueDisplay.text(value);
+            if (!input.empty()) input.property("value", value);
         });
 
         slider.on("change", (event) => {
-            const value = parseInt(event.target.value);
+            let value = parseInt(event.target.value, 10);
+            if (!Number.isFinite(value)) value = this.currentDeityCount;
+            value = Math.max(minVal, Math.min(maxVal, value));
 
             // Save to localStorage
             localStorage.setItem('rigveda_deity_count', value);
@@ -133,6 +141,31 @@ class HymnSimilarityMap
             // Reload the page to apply changes
             location.reload();
         });
+
+        if (!input.empty()) {
+            input.on("input", (event) => {
+                const raw = event.target.value;
+                let value = parseInt(raw, 10);
+                if (!Number.isFinite(value)) {
+                    // Revert to last known good without committing
+                    event.target.value = this.currentDeityCount;
+                    return;
+                }
+                value = Math.max(minVal, Math.min(maxVal, value));
+                event.target.value = value;
+                slider.property("value", value);
+                valueDisplay.text(value);
+            });
+
+            input.on("change", (event) => {
+                let value = parseInt(event.target.value, 10);
+                if (!Number.isFinite(value)) value = this.currentDeityCount;
+                value = Math.max(minVal, Math.min(maxVal, value));
+                event.target.value = value;
+                localStorage.setItem('rigveda_deity_count', value);
+                location.reload();
+            });
+        }
 
         // Handle backdrop click to close info panel
         d3.select("#backdrop").on("click", () => this.CloseInfoPanel());
@@ -144,63 +177,6 @@ class HymnSimilarityMap
             this.svg.attr("width", this.width).attr("height", this.height);
             // this.simulation.force("center", d3.forceCenter(this.width / 2, this.height / 2));
             this.simulation.alpha(0.3).restart();
-        });
-    }
-
-    InitializeSearch() {
-        const searchInput = d3.select("#searchInput");
-        const searchResults = d3.select("#searchResults");
-
-        searchInput.on("input", () => {
-            const query = searchInput.property("value").toLowerCase().trim();
-
-            if (query.length < 2) {
-                searchResults.style("display", "none");
-                return;
-            }
-
-            const matches = this.allNodes.filter(node =>
-                node.title.toLowerCase().includes(query) ||
-                node.deity_names.toLowerCase().includes(query) ||
-                `${node.book_number}.${node.hymn_number}`.includes(query)
-            ).slice(0, 10);
-
-            if (matches.length > 0) {
-                const resultHtml = matches.map(node =>
-                    `<div style="
-                        padding: 8px;
-                        cursor: pointer;
-                        border-bottom: 1px solid #8b6f47;
-                        transition: background 0.2s;
-                    "
-                    data-hymn-id="${node.id}"
-                    onmouseover="this.style.background='rgba(139, 111, 71, 0.2)'"
-                    onmouseout="this.style.background='transparent'">
-                        <strong style="color: #5d3a1a; font-family: 'Noto Serif Devanagari', serif;">${node.title}</strong><br>
-                        <small style="color: #6d5638;">Book ${node.book_number}, Hymn ${node.hymn_number} - ${node.deity_names}</small>
-                    </div>`
-                ).join("");
-
-                searchResults.html(resultHtml).style("display", "block");
-
-                // Add click handlers to search results
-                searchResults.selectAll("div").on("click", (event) => {
-                    const hymnId = event.target.closest("div").getAttribute("data-hymn-id");
-                    this.FocusOnNode(hymnId);
-                    searchResults.style("display", "none");
-                    searchInput.property("value", "");
-                });
-            } else {
-                searchResults.html("<div style='padding: 10px; color: #6d5638; text-align: center;'>No matches found</div>")
-                    .style("display", "block");
-            }
-        });
-
-        // Hide search results when clicking elsewhere
-        document.addEventListener("click", (event) => {
-            if (!event.target.closest("#controls")) {
-                searchResults.style("display", "none");
-            }
         });
     }
 
@@ -1017,13 +993,6 @@ class HymnSimilarityMap
         // d.fy = null;
     }
 
-    ResetView() {
-        this.svg.transition().duration(750).call(
-            this.zoom.transform,
-            d3.zoomIdentity
-        );
-    }
-
     CenterGraph() {
         const nodes = Array.from(this.nodes.values());
         if (nodes.length === 0) return;
@@ -1048,38 +1017,7 @@ class HymnSimilarityMap
         );
     }
 
-    async FocusOnNode(hymnId) {
-        // Add node to graph if not already present
-        if (!this.nodes.has(hymnId)) {
-            const foundNode = this.allNodes.find(node => node.id === hymnId);
-            if (foundNode) {
-                this.nodes.set(hymnId, { 
-                    ...foundNode, 
-                    x: this.width / 2, 
-                    y: this.height / 2 
-                });
-                this.UpdateVisualization();
-            }
-        }
-
-        // Load neighbors and focus on the node
-        await this.OnNodeClick(hymnId);
-        
-        // Center the view on this node
-        const node = this.nodes.get(hymnId);
-        if (node) {
-            const scale = 1.5;
-            const translate = [
-                this.width / 2 - scale * node.x,
-                this.height / 2 - scale * node.y
-            ];
-
-            this.svg.transition().duration(750).call(
-                this.zoom.transform,
-                d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
-            );
-        }
-    }
+    
 }
 
 // Initialize the application
