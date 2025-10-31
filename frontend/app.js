@@ -52,6 +52,8 @@ class HymnSimilarityMap
 
     InitializeSimulation() {
         console.log('Initializing simulation...');
+        const maxRadius = Math.min(this.width, this.height) * 0.42;
+
         this.simulation = d3.forceSimulation()
             .force("link", d3.forceLink()
                 .id(d => d.id)
@@ -59,16 +61,19 @@ class HymnSimilarityMap
                 .strength(d => (d.similarity || 0) * 0.3)
             )
             .force("charge", d3.forceManyBody()
-                .strength(-80)
-                .distanceMax(300)
+                .strength(-0.5)
+                .distanceMax(30)
             )
-            .force("center", d3.forceCenter(this.width / 2, this.height / 2).strength(0.05))
+            .force("center", d3.forceCenter(this.width / 2, this.height / 2).strength(0.005))
             .force("collision", d3.forceCollide()
-                .radius(d => this.GetNodeRadius(d) + 2)
-                .strength(0.7)
+                .radius(d => this.GetNodeRadius(d) + 3)
+                .strength(1.0)
+                .iterations(3)
             )
-            // Cluster by deity
-            .force("cluster", this.CreateClusterForce());
+            // Constrain to circular boundary - keep nodes in circular pattern
+            .force("radial", d3.forceRadial(maxRadius, this.width / 2, this.height / 2).strength(0.02))
+            .alphaDecay(0.02)
+            .velocityDecay(0.8);
     }
 
     InitializeTooltip() {
@@ -178,8 +183,8 @@ class HymnSimilarityMap
             });
 
             console.log(`Added ${this.nodes.size} nodes to visualization`);
-            this.UpdateVisualization();
-            
+            this.UpdateVisualizationStatic();
+
             d3.select("#loading").style("display", "none");
         } catch (error) {
             console.error('Error loading initial data:', error);
@@ -188,7 +193,7 @@ class HymnSimilarityMap
     }
 
     CreateClusterForce() {
-        const strength = 0.3;
+        const strength = 0.2;
         return alpha => {
             const centroids = this.CalculateDeityCentroids();
             this.allNodes.forEach(node => {
@@ -213,24 +218,32 @@ class HymnSimilarityMap
             }
         });
 
-        // Calculate centroid positions - major deities in center
+        // Calculate centroid positions in a single circular arrangement
         const centerX = this.width / 2;
         const centerY = this.height / 2;
         const centroids = {};
 
-        // Sort deities by hymn count
+        // Sort deities by hymn count (descending)
         const deityIds = Object.keys(deityGroups).map(Number);
         const deityCounts = deityIds.map(id => ({
             id,
             count: deityGroups[id].length
         })).sort((a, b) => b.count - a.count);
 
-        // Position major deities (more hymns) toward center
+        const totalDeities = deityCounts.length;
+
+        // Calculate radius based on screen size
+        // Use variable radii - major deities closer to center, minor deities on edge
+        const maxRadius = Math.min(this.width, this.height) * 0.38;
+
+        // Arrange deity clusters in a circular pattern with varying radii
         deityCounts.forEach((deity, index) => {
-            const angle = (index / deityCounts.length) * 2 * Math.PI;
-            // Smaller radius for deities with more hymns
-            const radiusFactor = Math.sqrt(index / deityCounts.length);
-            const radius = 100 + radiusFactor * 400;
+            const angle = (index / totalDeities) * 2 * Math.PI - Math.PI / 2; // Start from top
+
+            // Major deities (first few) get smaller radius, minor deities get larger radius
+            const radiusFactor = 0.3 + (index / totalDeities) * 0.7; // 30% to 100%
+            const radius = maxRadius * radiusFactor;
+
             centroids[deity.id] = {
                 x: centerX + Math.cos(angle) * radius,
                 y: centerY + Math.sin(angle) * radius
@@ -241,30 +254,60 @@ class HymnSimilarityMap
     }
 
     PositionNodesByScore(nodes) {
-        console.log(`Positioning ${nodes.length} nodes by deity clusters`);
+        console.log(`Positioning ${nodes.length} nodes in circular pattern`);
 
         const centerX = this.width / 2;
         const centerY = this.height / 2;
 
-        // Calculate deity centroids
-        const centroids = this.CalculateDeityCentroids();
+        // Calculate base radius for the circle - use about 40% of the smaller dimension
+        const baseRadius = Math.min(this.width, this.height) * 0.35;
 
-        // Position nodes near their deity centroid
-        nodes.forEach((node, index) => {
-            if (node.primary_deity_id !== null && centroids[node.primary_deity_id]) {
-                const centroid = centroids[node.primary_deity_id];
-                const angle = Math.random() * 2 * Math.PI;
-                const radius = Math.random() * 80;
-                node.x = centroid.x + Math.cos(angle) * radius;
-                node.y = centroid.y + Math.sin(angle) * radius;
+        // Sort nodes by score to position high-scoring nodes closer to center
+        const sortedNodes = [...nodes].sort((a, b) => b.hymn_score - a.hymn_score);
+
+        // Calculate appropriate spacing based on node sizes
+        const avgNodeRadius = 8; // Average node radius including stroke
+        const minSpacing = avgNodeRadius * 2.5; // Minimum distance between node centers
+
+        let placedNodes = 0;
+        let ringIndex = 0;
+
+        while (placedNodes < sortedNodes.length) {
+            // Calculate radius for this ring
+            const ringRadius = ringIndex === 0 ? 0 : baseRadius * 0.2 + (ringIndex * minSpacing);
+
+            // Calculate how many nodes can fit in this ring based on circumference
+            let nodesInThisRing;
+            if (ringIndex === 0) {
+                nodesInThisRing = 1; // Single node at center
             } else {
-                // Fallback for nodes without deity
-                const angle = Math.random() * 2 * Math.PI;
-                const radius = 400 + Math.random() * 200;
-                node.x = centerX + Math.cos(angle) * radius;
-                node.y = centerY + Math.sin(angle) * radius;
+                const circumference = 2 * Math.PI * ringRadius;
+                nodesInThisRing = Math.floor(circumference / minSpacing);
+                nodesInThisRing = Math.max(6, nodesInThisRing); // Minimum 6 nodes per ring
             }
-        });
+
+            // Limit nodes in this ring to remaining nodes
+            nodesInThisRing = Math.min(nodesInThisRing, sortedNodes.length - placedNodes);
+
+            // Place nodes in this ring
+            for (let i = 0; i < nodesInThisRing; i++) {
+                const node = sortedNodes[placedNodes];
+
+                // Calculate angle - evenly distribute nodes around the ring
+                const angle = (i / nodesInThisRing) * 2 * Math.PI;
+
+                node.x = centerX + Math.cos(angle) * ringRadius;
+                node.y = centerY + Math.sin(angle) * ringRadius;
+                node.vx = 0;
+                node.vy = 0;
+
+                placedNodes++;
+            }
+
+            ringIndex++;
+        }
+
+        console.log(`Placed ${placedNodes} nodes in ${ringIndex} concentric rings`);
     }
 
     GetNodeRadius(node) {
@@ -442,7 +485,126 @@ class HymnSimilarityMap
         });
 
         console.log(`Starting simulation with ${nodesArray.length} nodes`);
-        this.simulation.alpha(0.1).restart();
+        this.simulation.alpha(0.05).restart();
+    }
+
+    UpdateVisualizationStatic() {
+        const nodesArray = Array.from(this.nodes.values());
+        const linksArray = this.showLinks ? Array.from(this.links.values()) : [];
+
+        console.log(`UpdateVisualizationStatic: ${nodesArray.length} nodes, ${linksArray.length} links`);
+
+        // Update simulation data
+        this.simulation.nodes(nodesArray);
+        this.simulation.force("link").links(linksArray);
+
+        // Update links (hidden when showLinks is false)
+        if (this.showLinks) {
+            const linkSelection = this.linkGroup
+                .selectAll(".link")
+                .data(linksArray, d => `${d.source.id || d.source}-${d.target.id || d.target}`);
+
+            linkSelection.enter()
+                .append("line")
+                .attr("class", "link")
+                .style("stroke-width", d => Math.max(0.5, d.similarity * 2))
+                .style("stroke-opacity", d => {
+                    if (!this.isFocusMode) return 0.2 + d.similarity * 0.6;
+                    const a = d.source.id || d.source;
+                    const b = d.target.id || d.target;
+                    const inFocus = (a === this.focusNodeId || this.focusNeighborIds.has(a)) &&
+                                    (b === this.focusNodeId || this.focusNeighborIds.has(b));
+                    return inFocus ? 0.9 : 0.08;
+                });
+
+            linkSelection.exit().remove();
+        } else {
+            this.linkGroup.selectAll(".link").remove();
+        }
+
+        // Update nodes
+        const nodeSelection = this.nodeGroup
+            .selectAll(".node-group")
+            .data(nodesArray, d => d.id);
+
+        const nodeEnter = nodeSelection.enter()
+            .append("g")
+            .attr("class", "node-group");
+
+        nodeEnter
+            .append("circle")
+            .attr("class", "node")
+            .attr("r", d => this.GetNodeRadius(d))
+            .attr("fill", d => this.GetNodeColor(d))
+            .on("click", (event, d) => {
+                event.stopPropagation();
+                this.OnNodeClick(d.id);
+            })
+            .on("mouseover", (event, d) => this.ShowTooltip(event, d))
+            .on("mouseout", () => this.HideTooltip())
+            .call(d3.drag()
+                .on("start", (event, d) => this.DragStarted(event, d))
+                .on("drag", (event, d) => this.Dragged(event, d))
+                .on("end", (event, d) => this.DragEnded(event, d))
+            );
+
+        // Add labels only for top nodes (top 5% by score)
+        const topNodes = [...nodesArray].sort((a, b) => b.hymn_score - a.hymn_score).slice(0, Math.ceil(nodesArray.length * 0.05));
+        const topNodeIds = new Set(topNodes.map(n => n.id));
+
+        nodeEnter
+            .append("text")
+            .attr("class", "node-label")
+            .attr("dy", ".35em")
+            .style("font-size", d => {
+                if (topNodeIds.has(d.id)) {
+                    return Math.max(8, this.GetNodeRadius(d) / 2) + "px";
+                }
+                return "0px";
+            })
+            .style("opacity", d => topNodeIds.has(d.id) ? 1 : 0)
+            .text(d => topNodeIds.has(d.id) ? d.hymn_number : "");
+
+        // Update existing nodes
+        nodeSelection
+            .style("opacity", d => {
+                if (!this.isFocusMode) return 1;
+                return (d.id === this.focusNodeId || this.focusNeighborIds.has(d.id)) ? 1 : 0.15;
+            });
+
+        nodeSelection.select(".node")
+            .classed("selected", d => d.id === this.selectedNode)
+            .attr("r", d => this.GetNodeRadius(d));
+
+        nodeSelection.select(".node-label")
+            .style("font-size", d => {
+                if (topNodeIds.has(d.id)) {
+                    return Math.max(8, this.GetNodeRadius(d) / 2) + "px";
+                }
+                return "0px";
+            })
+            .style("opacity", d => topNodeIds.has(d.id) ? 1 : 0)
+            .text(d => topNodeIds.has(d.id) ? d.hymn_number : "");
+
+        nodeSelection.exit().remove();
+
+        // Set up tick function to update positions during simulation
+        this.simulation.on("tick", () => {
+            if (this.showLinks) {
+                this.linkGroup.selectAll(".link")
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+            }
+
+            this.nodeGroup.selectAll(".node-group")
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Run simulation briefly to resolve collisions, then let it settle naturally
+        console.log(`Running simulation to resolve overlaps...`);
+        this.simulation.alpha(0.3).restart();
     }
 
     ClearFocusMode() {
