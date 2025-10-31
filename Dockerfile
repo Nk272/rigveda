@@ -25,7 +25,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy only what the app needs (avoid bundling local DB and large datasets)
 COPY backend /app/backend
 COPY frontend /app/frontend
-COPY Data/JSONMaps /app/Data/JSONMaps
+COPY Data /app/Data
 COPY hymn_vectors.db /app/hymn_vectors.db
 
 EXPOSE 8000
