@@ -9,7 +9,6 @@ venv/
 .git/
 node_modules/
 
-hymn_vectors.db
 Data/rigveda_texts/
 Data/Viz/
 

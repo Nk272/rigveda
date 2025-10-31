@@ -26,6 +26,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY backend /app/backend
 COPY frontend /app/frontend
 COPY Data/JSONMaps /app/Data/JSONMaps
+COPY hymn_vectors.db /app/hymn_vectors.db
 
 EXPOSE 8000
 
