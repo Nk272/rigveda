@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from pathlib import Path
 
@@ -14,3 +14,11 @@ def GetDatabase():
         yield db
     finally:
         db.close()
+
+def EnsureIndexes():
+    conn = engine.connect()
+    try:
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_hymn_sim_h1 ON hymn_similarities_cosine(hymn1_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_hymn_sim_h2 ON hymn_similarities_cosine(hymn2_id)"))
+    finally:
+        conn.close()

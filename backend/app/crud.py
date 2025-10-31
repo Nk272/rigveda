@@ -1,7 +1,9 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 from . import models
+
+_SIMILAR_CACHE: Dict[Tuple[str, int], List[Tuple[str, float]]] = {}
 
 def GetAllHymns(db: Session) -> List[models.HymnVector]:
     return db.query(models.HymnVector).order_by(models.HymnVector.book_number, models.HymnVector.hymn_number).all()
@@ -13,28 +15,39 @@ def GetHymnById(db: Session, hymnId: str) -> Optional[models.HymnVector]:
     return db.query(models.HymnVector).filter(models.HymnVector.hymn_id == hymnId).first()
 
 def GetSimilarHymns(db: Session, hymnId: str, limit: int = 8) -> List[tuple]:
-    # Query similarities where hymnId is hymn1_id or hymn2_id
-    similarities = db.query(
-        models.HymnSimilarity.hymn1_id,
-        models.HymnSimilarity.hymn2_id,
+    # Fetch from both sides separately to leverage individual indexes
+    left = db.query(
+        models.HymnSimilarity.hymn2_id.label("other_id"),
         models.HymnSimilarity.similarity
     ).filter(
-        or_(
-            models.HymnSimilarity.hymn1_id == hymnId,
-            models.HymnSimilarity.hymn2_id == hymnId
-        )
+        models.HymnSimilarity.hymn1_id == hymnId
     ).order_by(desc(models.HymnSimilarity.similarity)).limit(limit).all()
 
-    # Extract the other hymn IDs and similarities
-    result = []
-    for sim in similarities:
-        otherHymnId = sim.hymn2_id if sim.hymn1_id == hymnId else sim.hymn1_id
-        result.append((otherHymnId, sim.similarity))
+    right = db.query(
+        models.HymnSimilarity.hymn1_id.label("other_id"),
+        models.HymnSimilarity.similarity
+    ).filter(
+        models.HymnSimilarity.hymn2_id == hymnId
+    ).order_by(desc(models.HymnSimilarity.similarity)).limit(limit).all()
 
-    return result
+    combined: Dict[str, float] = {}
+    for oid, sim in left:
+        if oid not in combined or sim > combined[oid]:
+            combined[oid] = sim
+    for oid, sim in right:
+        if oid not in combined or sim > combined[oid]:
+            combined[oid] = sim
+
+    # Sort by similarity and take top N
+    sorted_pairs = sorted(combined.items(), key=lambda x: x[1], reverse=True)[:limit]
+    return [(oid, sim) for oid, sim in sorted_pairs]
 
 def GetDiverseSimilarHymns(db: Session, hymnId: str, limit: int = 4) -> List[tuple]:
     """Get similar hymns from different deities for diversity"""
+    cacheKey = (hymnId, limit)
+    cached = _SIMILAR_CACHE.get(cacheKey)
+    if cached is not None:
+        return cached
     # Get the source hymn's deity
     sourceHymn = GetHymnById(db, hymnId)
     if not sourceHymn:
@@ -42,25 +55,10 @@ def GetDiverseSimilarHymns(db: Session, hymnId: str, limit: int = 4) -> List[tup
 
     sourceDeityId = sourceHymn.primary_deity_id
 
-    # Query all similarities
-    similarities = db.query(
-        models.HymnSimilarity.hymn1_id,
-        models.HymnSimilarity.hymn2_id,
-        models.HymnSimilarity.similarity
-    ).filter(
-        or_(
-            models.HymnSimilarity.hymn1_id == hymnId,
-            models.HymnSimilarity.hymn2_id == hymnId
-        )
-    ).order_by(desc(models.HymnSimilarity.similarity)).limit(100).all()
-
-    # Extract hymn IDs
-    candidateIds = []
-    similarityMap = {}
-    for sim in similarities:
-        otherHymnId = sim.hymn2_id if sim.hymn1_id == hymnId else sim.hymn1_id
-        candidateIds.append(otherHymnId)
-        similarityMap[otherHymnId] = sim.similarity
+    # Get candidates using the optimized fetch
+    pairs = GetSimilarHymns(db, hymnId, limit=50)
+    candidateIds = [oid for oid, _ in pairs]
+    similarityMap = {oid: sim for oid, sim in pairs}
 
     # Get hymns with their deities
     candidateHymns = GetHymnsByIds(db, candidateIds)
@@ -84,6 +82,7 @@ def GetDiverseSimilarHymns(db: Session, hymnId: str, limit: int = 4) -> List[tup
                 if len(result) >= limit:
                     break
 
+    _SIMILAR_CACHE[cacheKey] = result
     return result
 
 def GetHymnsByIds(db: Session, hymnIds: List[str]) -> List[models.HymnVector]:

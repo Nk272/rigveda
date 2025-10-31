@@ -1,9 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.gzip import GZipMiddleware
 from .routes import nodes
+from .db import EnsureIndexes
 
 app = FastAPI(title="Rigveda Hymn Similarity API", version="1.0.0")
+# Compression
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Enable CORS for frontend
 app.add_middleware(
@@ -27,3 +31,6 @@ app.mount("/Data", StaticFiles(directory="Data"), name="data")
 
 # Serve static files (frontend) - must be last as catch-all
 app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
+
+# Ensure DB indexes on startup
+EnsureIndexes()

@@ -9,9 +9,6 @@ venv/
 .git/
 node_modules/
 
-Data/rigveda_texts/
-Data/Viz/
-
 .DS_Store
 .idea/
 .vscode/
