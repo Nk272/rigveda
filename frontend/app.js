@@ -506,7 +506,7 @@ class HymnSimilarityMap
 
     GetHindiTranslationUrl(bookNumber, hymnNumber) {
         const hymnStr = String(hymnNumber).padStart(3, '0');
-        const prefix = Number(bookNumber) === 10 ? '' : `0f`;
+        const prefix = Number(bookNumber) === 10 ? '' : `0`;
         return `https://sacred-texts.com/hin/rvsan/rv${prefix}${hymnStr}.htm`;
     }
 
@@ -933,8 +933,6 @@ class HymnSimilarityMap
                 <strong style="color: #5d3a1a; font-size: 14px;">${idx + 1}. ${nb.title}</strong>
                 <small style="color: #6d5638; font-weight: 600; display: block; margin-top: 2px;">
                     Book ${nb.book_number}.${nb.hymn_number} • ${(nb.similarity * 100).toFixed(1)}%
-                    &nbsp;·&nbsp;
-                    <a href="${this.GetHindiTranslationUrl(nb.book_number, nb.hymn_number)}" target="_blank" rel="noopener noreferrer" style="color: #5d3a1a; text-decoration: underline;">हिन्दी</a>
                 </small>
             </div>
         `).join('');
