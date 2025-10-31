@@ -97,7 +97,10 @@ class HymnSimilarityMap
     InitializeControls() {
         d3.select("#resetBtn").on("click", () => this.ResetView());
         d3.select("#centerBtn").on("click", () => this.CenterGraph());
-        
+
+        // Handle backdrop click to close info panel
+        d3.select("#backdrop").on("click", () => this.CloseInfoPanel());
+
         // Handle window resize
         window.addEventListener("resize", () => {
             this.width = window.innerWidth;
@@ -111,32 +114,39 @@ class HymnSimilarityMap
     InitializeSearch() {
         const searchInput = d3.select("#searchInput");
         const searchResults = d3.select("#searchResults");
-        
+
         searchInput.on("input", () => {
             const query = searchInput.property("value").toLowerCase().trim();
-            
+
             if (query.length < 2) {
                 searchResults.style("display", "none");
                 return;
             }
-            
-            const matches = this.allNodes.filter(node => 
+
+            const matches = this.allNodes.filter(node =>
                 node.title.toLowerCase().includes(query) ||
                 node.deity_names.toLowerCase().includes(query) ||
                 `${node.book_number}.${node.hymn_number}`.includes(query)
             ).slice(0, 10);
-            
+
             if (matches.length > 0) {
-                const resultHtml = matches.map(node => 
-                    `<div style="padding: 5px; cursor: pointer; border-bottom: 1px solid #333;" 
-                          data-hymn-id="${node.id}">
-                        <strong>${node.title}</strong><br>
-                        <small>Book ${node.book_number}, Hymn ${node.hymn_number} - ${node.deity_names}</small>
+                const resultHtml = matches.map(node =>
+                    `<div style="
+                        padding: 8px;
+                        cursor: pointer;
+                        border-bottom: 1px solid #8b6f47;
+                        transition: background 0.2s;
+                    "
+                    data-hymn-id="${node.id}"
+                    onmouseover="this.style.background='rgba(139, 111, 71, 0.2)'"
+                    onmouseout="this.style.background='transparent'">
+                        <strong style="color: #5d3a1a; font-family: 'Noto Serif Devanagari', serif;">${node.title}</strong><br>
+                        <small style="color: #6d5638;">Book ${node.book_number}, Hymn ${node.hymn_number} - ${node.deity_names}</small>
                     </div>`
                 ).join("");
-                
+
                 searchResults.html(resultHtml).style("display", "block");
-                
+
                 // Add click handlers to search results
                 searchResults.selectAll("div").on("click", (event) => {
                     const hymnId = event.target.closest("div").getAttribute("data-hymn-id");
@@ -145,11 +155,11 @@ class HymnSimilarityMap
                     searchInput.property("value", "");
                 });
             } else {
-                searchResults.html("<div style='padding: 10px; color: #999;'>No matches found</div>")
+                searchResults.html("<div style='padding: 10px; color: #6d5638; text-align: center;'>No matches found</div>")
                     .style("display", "block");
             }
         });
-        
+
         // Hide search results when clicking elsewhere
         document.addEventListener("click", (event) => {
             if (!event.target.closest("#controls")) {
@@ -498,6 +508,25 @@ class HymnSimilarityMap
         this.simulation.nodes(nodesArray);
         this.simulation.force("link").links(linksArray);
 
+        // Pre-compute collision resolution before showing nodes
+        console.log('Pre-computing collision resolution...');
+        d3.select("#loading").text("Optimizing layout...");
+
+        // Run simulation in background without updating DOM
+        const targetAlpha = 0.001; // Threshold for stable simulation
+        const maxIterations = 300; // Safety limit
+        let iterations = 0;
+
+        this.simulation.on("tick", null); // Temporarily disable tick updates
+
+        // Run simulation until it stabilizes
+        while (this.simulation.alpha() > targetAlpha && iterations < maxIterations) {
+            this.simulation.tick();
+            iterations++;
+        }
+
+        console.log(`Completed ${iterations} pre-computation iterations (alpha: ${this.simulation.alpha().toFixed(4)})`);
+
         // Update links (hidden when showLinks is false)
         if (this.showLinks) {
             const linkSelection = this.linkGroup
@@ -588,7 +617,19 @@ class HymnSimilarityMap
 
         nodeSelection.exit().remove();
 
-        // Set up tick function to update positions during simulation
+        // Now set positions to the pre-computed stable positions
+        if (this.showLinks) {
+            this.linkGroup.selectAll(".link")
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+        }
+
+        this.nodeGroup.selectAll(".node-group")
+            .attr("transform", d => `translate(${d.x},${d.y})`);
+
+        // Set up tick function for any future dynamic updates (drag, etc.)
         this.simulation.on("tick", () => {
             if (this.showLinks) {
                 this.linkGroup.selectAll(".link")
@@ -602,9 +643,9 @@ class HymnSimilarityMap
                 .attr("transform", d => `translate(${d.x},${d.y})`);
         });
 
-        // Run simulation briefly to resolve collisions, then let it settle naturally
-        console.log(`Running simulation to resolve overlaps...`);
-        this.simulation.alpha(0.3).restart();
+        // Stop the simulation - nodes are already in stable positions
+        this.simulation.stop();
+        console.log('Layout optimized and ready for display');
     }
 
     ClearFocusMode() {
@@ -661,7 +702,10 @@ class HymnSimilarityMap
 
     async ShowNodeInfoWithSummary(node, neighbors, nodeId) {
         const infoPanel = d3.select("#info");
+        const backdrop = d3.select("#backdrop");
+
         infoPanel.style("display", "block");
+        backdrop.style("display", "block");
 
         // Fetch summary for the main hymn
         let summary = "Loading summary...";
@@ -674,72 +718,50 @@ class HymnSimilarityMap
             summary = "Summary not available.";
         }
 
-        // Build similar hymns HTML
+        // Build similar hymns HTML with new styling - more compact
         const similarHymnsHtml = neighbors.map((nb, idx) => `
-            <div style="
-                padding: 10px;
-                margin: 8px 0;
-                background: rgba(255, 255, 255, 0.05);
-                border-left: 3px solid ${nb.deity_color};
-                border-radius: 3px;
-                cursor: pointer;
-                transition: background 0.2s;
-            "
-            onmouseover="this.style.background='rgba(255,255,255,0.1)'"
-            onmouseout="this.style.background='rgba(255,255,255,0.05)'"
-            onclick="window.hymnMap.OnNodeClick('${nb.id}')">
-                <strong>${idx + 1}. ${nb.title}</strong><br>
-                <small>Book ${nb.book_number}, Hymn ${nb.hymn_number} • Similarity: ${(nb.similarity * 100).toFixed(1)}%</small><br>
-                <em style="font-size: 11px; color: #bbb;">${nb.summary.substring(0, 150)}${nb.summary.length > 150 ? '...' : ''}</em>
+            <div class="similar-hymn" onclick="window.hymnMap.OnNodeClick('${nb.id}')" style="border-left-color: ${nb.deity_color}; padding: 8px 12px; margin: 6px 0;">
+                <strong style="color: #5d3a1a; font-size: 14px;">${idx + 1}. ${nb.title}</strong>
+                <small style="color: #6d5638; font-weight: 600; display: block; margin-top: 2px;">
+                    Book ${nb.book_number}.${nb.hymn_number} • ${(nb.similarity * 100).toFixed(1)}%
+                </small>
             </div>
         `).join('');
 
         infoPanel.html(`
-            <div style="max-height: calc(100vh - 100px); overflow-y: auto;">
-                <h3 style="margin: 0 0 10px 0; color: ${node.deity_color}; border-bottom: 2px solid ${node.deity_color}; padding-bottom: 5px;">
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <h3 style="color: ${node.deity_color}; border-bottom-color: ${node.deity_color}; margin: 0;">
                     ${node.title}
                 </h3>
-                <p style="margin: 5px 0; font-size: 13px;">
-                    <strong>Book:</strong> ${node.book_number} &nbsp;|&nbsp;
-                    <strong>Hymn:</strong> ${node.hymn_number}<br>
-                    <strong>Deities:</strong> ${node.deity_names || "Unknown"}<br>
-                    <strong>Score:</strong> ${node.hymn_score.toFixed(1)}
-                </p>
 
-                <div style="
-                    margin: 15px 0;
-                    padding: 12px;
-                    background: rgba(0, 0, 0, 0.3);
-                    border-radius: 5px;
-                    border-left: 3px solid ${node.deity_color};
-                ">
-                    <h4 style="margin: 0 0 8px 0; color: #4CAF50;">Summary</h4>
-                    <p style="font-size: 13px; line-height: 1.5; margin: 0;">
-                        ${summary}
-                    </p>
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 300px;">
+                        <div style="padding: 10px; background: rgba(139, 111, 71, 0.08); border-radius: 6px; border: 2px solid rgba(139, 111, 71, 0.2); margin-bottom: 12px;">
+                            <p style="margin: 5px 0; font-size: 14px;">
+                                <strong>Book:</strong> ${node.book_number} &nbsp;|&nbsp; <strong>Hymn:</strong> ${node.hymn_number} &nbsp;|&nbsp; <strong>Score:</strong> ${node.hymn_score.toFixed(1)}
+                            </p>
+                            <p style="margin: 5px 0; font-size: 14px;">
+                                <strong>Deities:</strong> ${node.deity_names || "Unknown"}
+                            </p>
+                        </div>
+
+                        <div class="summary-section" style="border-left-color: ${node.deity_color}; margin: 0; padding: 12px;">
+                            <h4 style="margin: 0 0 8px 0;">सारांश (Summary)</h4>
+                            <p style="font-size: 13px; line-height: 1.6; margin: 0;">
+                                ${summary}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style="flex: 0 0 280px; min-width: 280px;">
+                        <h4 style="margin: 0 0 10px 0; color: #5d3a1a; font-size: 16px; text-align: center; font-family: 'Noto Serif Devanagari', serif;">
+                            समान सूक्त (Similar Hymns)
+                        </h4>
+                        ${similarHymnsHtml}
+                    </div>
                 </div>
 
-                <h4 style="margin: 15px 0 10px 0; color: #4CAF50;">
-                    4 Most Similar Hymns
-                </h4>
-                ${similarHymnsHtml}
-
-                <button
-                    onclick="window.hymnMap.CloseInfoPanel()"
-                    style="
-                        width: 100%;
-                        margin-top: 15px;
-                        padding: 10px;
-                        background: #e74c3c;
-                        color: white;
-                        border: none;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        font-size: 14px;
-                    "
-                    onmouseover="this.style.background='#c0392b'"
-                    onmouseout="this.style.background='#e74c3c'"
-                >
+                <button onclick="window.hymnMap.CloseInfoPanel()" style="align-self: center; width: auto; padding: 10px 40px;">
                     Close
                 </button>
             </div>
@@ -748,6 +770,7 @@ class HymnSimilarityMap
 
     HideInfoPanel() {
         d3.select("#info").style("display", "none");
+        d3.select("#backdrop").style("display", "none");
     }
 
     DragStarted(event, d) {
