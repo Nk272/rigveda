@@ -5,13 +5,15 @@ import os
 from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 
 def _BuildLibsqlUrlWithToken(baseUrl: str, authToken: str) -> str:
-    """Append authToken to libsql URL as query param while preserving existing params."""
+    """Convert libsql URL to SQLAlchemy dialect 'sqlite+libsql://' and append authToken."""
     parsed = urlparse(baseUrl)
     queryParams = dict(parse_qsl(parsed.query))
     if authToken:
         queryParams["authToken"] = authToken
     newQuery = urlencode(queryParams)
-    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, newQuery, parsed.fragment))
+    # Force SQLAlchemy dialect prefix
+    scheme = "sqlite+libsql"
+    return urlunparse((scheme, parsed.netloc, parsed.path, parsed.params, newQuery, parsed.fragment))
 
 
 libsqlUrl = os.getenv("LIBSQL_URL")

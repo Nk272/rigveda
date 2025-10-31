@@ -19,14 +19,43 @@ class HymnSimilarityMap
         const savedDeityCount = localStorage.getItem('rigveda_deity_count');
         this.currentDeityCount = savedDeityCount ? parseInt(savedDeityCount) : 4;
 
-        this.hymnTexts = {}; // Cache for hymn texts
+		this.hymnTexts = {}; // Cache for hymn texts
+		this.deityIdToName = {}; // deity_id -> deity_name
 
         this.InitializeSvg();
         this.InitializeSimulation();
         this.InitializeTooltip();
         this.InitializeControls();
-        this.LoadInitialData();
+		this.LoadInitialData();
     }
+	GetPrimaryDeityName(node) {
+		const deityId = node.primary_deity_id;
+		if (deityId !== null && deityId !== undefined && this.deityIdToName[deityId]) {
+			return this.deityIdToName[deityId];
+		}
+		const raw = node.deity_names || "";
+		const cleaned = raw.replace(/[\[\]"]+/g, '');
+		const deity = (cleaned.split(',')[0] || '').trim() || "Unknown";
+		return deity;
+	}
+
+	async LoadDeityNames() {
+		try {
+			const res = await fetch('/api/deities/stats');
+			if (res.ok) {
+				const list = await res.json();
+				this.deityIdToName = {};
+				list.forEach(d => {
+					if (d && d.deity_id !== null && d.deity_name) {
+						this.deityIdToName[d.deity_id] = d.deity_name;
+					}
+				});
+			}
+		} catch (e) {
+			console.error('Error loading deity names:', e);
+		}
+	}
+
 
     InitializeSvg() 
     {
@@ -180,7 +209,7 @@ class HymnSimilarityMap
         });
     }
 
-    async LoadInitialData() {
+	async LoadInitialData() {
         try {
             console.log(`Loading data for top ${this.currentDeityCount} deities...`);
             d3.select("#loading").text(`Loading hymns for top ${this.currentDeityCount} deities...`);
@@ -188,6 +217,9 @@ class HymnSimilarityMap
             // Clear existing nodes
             this.nodes.clear();
             this.links.clear();
+
+			// Load deity names first so labels match primary deity immediately
+			await this.LoadDeityNames();
 
             // Load nodes filtered by deity count
             const response = await fetch(`/api/graph/by-deities?n=${this.currentDeityCount}`);
@@ -647,22 +679,20 @@ class HymnSimilarityMap
                 .on("end", (event, d) => this.DragEnded(event, d))
             );
 
-        // Add labels only for top nodes (top 5% by score)
-        const topNodes = [...nodesArray].sort((a, b) => b.hymn_score - a.hymn_score).slice(0, Math.ceil(nodesArray.length * 0.05));
-        const topNodeIds = new Set(topNodes.map(n => n.id));
-
+		// Add labels for all nodes: primary deity name (only if it fits inside the node)
         nodeEnter
             .append("text")
             .attr("class", "node-label")
             .attr("dy", ".35em")
-            .style("font-size", d => {
-                if (topNodeIds.has(d.id)) {
-                    return Math.max(8, this.GetNodeRadius(d) / 2) + "px";
-                }
-                return "0px";
-            })
-            .style("opacity", d => topNodeIds.has(d.id) ? 1 : 0)
-            .text(d => topNodeIds.has(d.id) ? d.hymn_number : "");
+            .style("font-size", d => (this.GetNodeRadius(d) * 0.45) + "px")
+			.text(d => this.GetPrimaryDeityName(d))
+            .each((d, i, nodes) => {
+                const el = nodes[i];
+                const r = this.GetNodeRadius(d);
+                const width = el.getComputedTextLength ? el.getComputedTextLength() : 0;
+                const fits = width <= Math.max(0, (2 * r) - 4);
+                d3.select(el).style("opacity", fits ? 1 : 0);
+            });
 
         // Update existing nodes
         nodeSelection
@@ -675,15 +705,16 @@ class HymnSimilarityMap
             .classed("selected", d => d.id === this.selectedNode)
             .attr("r", d => this.GetNodeRadius(d));
 
-        nodeSelection.select(".node-label")
-            .style("font-size", d => {
-                if (topNodeIds.has(d.id)) {
-                    return Math.max(8, this.GetNodeRadius(d) / 2) + "px";
-                }
-                return "0px";
-            })
-            .style("opacity", d => topNodeIds.has(d.id) ? 1 : 0)
-            .text(d => topNodeIds.has(d.id) ? d.hymn_number : "");
+		nodeSelection.select(".node-label")
+			.style("font-size", d => (this.GetNodeRadius(d) * 0.45) + "px")
+			.text(d => this.GetPrimaryDeityName(d))
+            .each((d, i, nodes) => {
+                const el = nodes[i];
+                const r = this.GetNodeRadius(d);
+                const width = el.getComputedTextLength ? el.getComputedTextLength() : 0;
+                const fits = width <= Math.max(0, (2 * r) - 4);
+                d3.select(el).style("opacity", fits ? 1 : 0);
+            });
 
         nodeSelection.exit().remove();
 
@@ -784,22 +815,20 @@ class HymnSimilarityMap
                 .on("end", (event, d) => this.DragEnded(event, d))
             );
 
-        // Add labels only for top nodes (top 5% by score)
-        const topNodes = [...nodesArray].sort((a, b) => b.hymn_score - a.hymn_score).slice(0, Math.ceil(nodesArray.length * 0.05));
-        const topNodeIds = new Set(topNodes.map(n => n.id));
-
+		// Add labels for all nodes: primary deity name (only if it fits inside the node)
         nodeEnter
             .append("text")
             .attr("class", "node-label")
             .attr("dy", ".35em")
-            .style("font-size", d => {
-                if (topNodeIds.has(d.id)) {
-                    return Math.max(8, this.GetNodeRadius(d) / 2) + "px";
-                }
-                return "0px";
-            })
-            .style("opacity", d => topNodeIds.has(d.id) ? 1 : 0)
-            .text(d => topNodeIds.has(d.id) ? d.hymn_number : "");
+            .style("font-size", d => (this.GetNodeRadius(d) * 0.45) + "px")
+			.text(d => this.GetPrimaryDeityName(d))
+            .each((d, i, nodes) => {
+                const el = nodes[i];
+                const r = this.GetNodeRadius(d);
+                const width = el.getComputedTextLength ? el.getComputedTextLength() : 0;
+                const fits = width <= Math.max(0, (2 * r) - 4);
+                d3.select(el).style("opacity", fits ? 1 : 0);
+            });
 
         // Update existing nodes
         nodeSelection
@@ -812,15 +841,16 @@ class HymnSimilarityMap
             .classed("selected", d => d.id === this.selectedNode)
             .attr("r", d => this.GetNodeRadius(d));
 
-        nodeSelection.select(".node-label")
-            .style("font-size", d => {
-                if (topNodeIds.has(d.id)) {
-                    return Math.max(8, this.GetNodeRadius(d) / 2) + "px";
-                }
-                return "0px";
-            })
-            .style("opacity", d => topNodeIds.has(d.id) ? 1 : 0)
-            .text(d => topNodeIds.has(d.id) ? d.hymn_number : "");
+		nodeSelection.select(".node-label")
+			.style("font-size", d => (this.GetNodeRadius(d) * 0.45) + "px")
+			.text(d => this.GetPrimaryDeityName(d))
+            .each((d, i, nodes) => {
+                const el = nodes[i];
+                const r = this.GetNodeRadius(d);
+                const width = el.getComputedTextLength ? el.getComputedTextLength() : 0;
+                const fits = width <= Math.max(0, (2 * r) - 4);
+                d3.select(el).style("opacity", fits ? 1 : 0);
+            });
 
         nodeSelection.exit().remove();
 
@@ -879,10 +909,8 @@ class HymnSimilarityMap
         this.UpdateVisualization();
     }
 
-    ShowTooltip(event, node) {
-        const rawDeityNames = node.deity_names || "";
-        const cleanedDeityNames = rawDeityNames.replace(/[\[\]"]+/g, '');
-        const deityName = (cleanedDeityNames.split(',')[0] || '').trim() || "Unknown";
+	ShowTooltip(event, node) {
+		const deityName = this.GetPrimaryDeityName(node);
         this.tooltip
             .style("display", "block")
             .html(`
