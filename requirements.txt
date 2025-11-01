@@ -7,3 +7,4 @@ tqdm>=4.67.1
 numpy>=2.3.3
 flask>=3.1.2
 
+orjson>=3.9.5
