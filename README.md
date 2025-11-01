@@ -1,5 +1,6 @@
 # 🌺 Sphere of Influence: Rigveda  
 *A semantic & deity-based explorer for the hymns of the Rigveda.*
+https://x.com/nkgoyal272/status/1984326064177393866
 
 ---
 
